@@ -1,0 +1,102 @@
+{
+  "metadata": {
+    "title": "web3-ai — Pay-Per-Use AI Inference",
+    "description": "AI inference powered by micropayments. No subscriptions, no API keys. Connect your wallet and pay only for what you use."
+  },
+  "header": {
+    "howItWorks": "How it Works",
+    "features": "Features",
+    "pricing": "Pricing",
+    "getStarted": "Get Started"
+  },
+  "hero": {
+    "badge": "Powered by x402 Protocol",
+    "title": "Pay-Per-Use AI.\nNo Subscriptions. No API Keys.",
+    "subtitle": "Connect your Web3 wallet, send a micropayment in USDC, and get AI inference results instantly. Powered by x402 — the open standard for internet-native payments.",
+    "ctaPrimary": "Get Started",
+    "ctaSecondary": "Learn More"
+  },
+  "howItWorks": {
+    "title": "How it Works",
+    "subtitle": "Three simple steps from wallet to AI results.",
+    "steps": [
+      {
+        "title": "Connect Wallet",
+        "description": "Link your Web3 wallet in one click. No sign-ups, no accounts — your wallet is your identity."
+      },
+      {
+        "title": "Choose a Model",
+        "description": "Pick the AI model that fits your task — GPT, Claude, open-source models, and more."
+      },
+      {
+        "title": "Pay & Receive",
+        "description": "A USDC micropayment settles instantly on Base L2. Get your inference result in the same response."
+      }
+    ]
+  },
+  "features": {
+    "title": "Why web3-ai?",
+    "subtitle": "AI inference should be open, affordable, and verifiable.",
+    "items": [
+      {
+        "title": "Micropayments",
+        "description": "Pay fractions of a cent per request. No minimums, no monthly fees, no wasted credits."
+      },
+      {
+        "title": "No API Keys",
+        "description": "Your wallet is your identity. No sign-ups, no dashboards, no rate-limit emails."
+      },
+      {
+        "title": "Multi-Model",
+        "description": "Access GPT, Claude, and open-source models through a single unified API."
+      },
+      {
+        "title": "On-Chain Verification",
+        "description": "Every payment is recorded on-chain. Fully transparent and auditable by anyone."
+      },
+      {
+        "title": "Open Standard",
+        "description": "Built on the x402 protocol — no vendor lock-in, works with any compliant provider."
+      },
+      {
+        "title": "Base L2",
+        "description": "Transactions settle on Base for sub-cent gas fees and near-instant finality."
+      }
+    ]
+  },
+  "stats": {
+    "transactions": "1M+",
+    "transactionsLabel": "Transactions Processed",
+    "avgCost": "$0.002",
+    "avgCostLabel": "Avg. Cost per Inference",
+    "uptime": "99.9%",
+    "uptimeLabel": "Uptime"
+  },
+  "cta": {
+    "title": "Ready to Try Pay-Per-Use AI?",
+    "subtitle": "Connect your wallet and start making AI requests in seconds. No commitments, no subscriptions — just pay for what you use.",
+    "button": "Connect Wallet & Start"
+  },
+  "footer": {
+    "product": "Product",
+    "productLinks": {
+      "howItWorks": "How it Works",
+      "pricing": "Pricing",
+      "models": "Models",
+      "docs": "Documentation"
+    },
+    "developers": "Developers",
+    "developerLinks": {
+      "api": "API Reference",
+      "github": "GitHub",
+      "x402": "x402 Protocol",
+      "status": "Status"
+    },
+    "legal": "Legal",
+    "legalLinks": {
+      "privacy": "Privacy Policy",
+      "terms": "Terms of Service"
+    },
+    "copyright": "© {year} web3-ai. All rights reserved."
+  }
+}
