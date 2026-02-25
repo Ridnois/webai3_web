@@ -1,6 +1,7 @@
 import { Logo } from "@/components/logo";
 import { NavLink } from "@/components/nav-link";
 import { WalletButton } from "@/components/wallet/wallet-button";
+import { SignInButton } from "@/components/auth/sign-in-button";
 
 export function SiteHeader() {
   return (
@@ -11,8 +12,13 @@ export function SiteHeader() {
           <NavLink href="#how-it-works">How it Works</NavLink>
           <NavLink href="#features">Features</NavLink>
           <NavLink href="#pricing">Pricing</NavLink>
+          <NavLink href="/inference">Inference</NavLink>
+          <NavLink href="/history">History</NavLink>
         </nav>
-        <WalletButton />
+        <div className="flex items-center gap-3">
+          <SignInButton />
+          <WalletButton />
+        </div>
       </div>
     </header>
   );
