@@ -1,8 +1,6 @@
-import { useTranslations } from "next-intl";
 import { Separator } from "@/components/ui/separator";
 
 export function SiteFooter() {
-  const t = useTranslations("footer");
   const year = new Date().getFullYear();
 
   return (
@@ -10,66 +8,66 @@ export function SiteFooter() {
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid grid-cols-2 gap-8 md:grid-cols-3">
           <div>
-            <h3 className="text-sm font-semibold">{t("product")}</h3>
+            <h3 className="text-sm font-semibold">Product</h3>
             <ul className="mt-4 space-y-2">
               <li>
                 <a href="#how-it-works" className="text-sm text-muted-foreground hover:text-foreground">
-                  {t("productLinks.howItWorks")}
+                  How it Works
                 </a>
               </li>
               <li>
                 <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground">
-                  {t("productLinks.pricing")}
+                  Pricing
                 </a>
               </li>
               <li>
                 <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
-                  {t("productLinks.models")}
+                  Models
                 </a>
               </li>
               <li>
                 <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
-                  {t("productLinks.docs")}
-                </a>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold">{t("developers")}</h3>
-            <ul className="mt-4 space-y-2">
-              <li>
-                <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
-                  {t("developerLinks.api")}
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
-                  {t("developerLinks.github")}
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
-                  {t("developerLinks.x402")}
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
-                  {t("developerLinks.status")}
+                  Documentation
                 </a>
               </li>
             </ul>
           </div>
           <div>
-            <h3 className="text-sm font-semibold">{t("legal")}</h3>
+            <h3 className="text-sm font-semibold">Developers</h3>
             <ul className="mt-4 space-y-2">
               <li>
                 <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
-                  {t("legalLinks.privacy")}
+                  API Reference
                 </a>
               </li>
               <li>
                 <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
-                  {t("legalLinks.terms")}
+                  GitHub
+                </a>
+              </li>
+              <li>
+                <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
+                  x402 Protocol
+                </a>
+              </li>
+              <li>
+                <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
+                  Status
+                </a>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold">Legal</h3>
+            <ul className="mt-4 space-y-2">
+              <li>
+                <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
+                  Privacy Policy
+                </a>
+              </li>
+              <li>
+                <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
+                  Terms of Service
                 </a>
               </li>
             </ul>
@@ -77,7 +75,7 @@ export function SiteFooter() {
         </div>
         <Separator className="my-8" />
         <p className="text-center text-sm text-muted-foreground">
-          {t("copyright", { year })}
+          &copy; {year} web3-ai. All rights reserved.
         </p>
       </div>
     </footer>

@@ -1,4 +1,3 @@
-import { useTranslations } from "next-intl";
 import {
   Coins,
   KeyRound,
@@ -10,24 +9,60 @@ import {
 import { SectionHeading } from "@/components/section-heading";
 import { FeatureCard } from "@/components/feature-card";
 
-const featureIcons = [Coins, KeyRound, Layers, ShieldCheck, Globe, Zap];
+const features = [
+  {
+    icon: Coins,
+    title: "Micropayments",
+    description:
+      "Pay fractions of a cent per request. No minimums, no monthly fees, no wasted credits.",
+  },
+  {
+    icon: KeyRound,
+    title: "No API Keys",
+    description:
+      "Your wallet is your identity. No sign-ups, no dashboards, no rate-limit emails.",
+  },
+  {
+    icon: Layers,
+    title: "Multi-Model",
+    description:
+      "Access GPT, Claude, and open-source models through a single unified API.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "On-Chain Verification",
+    description:
+      "Every payment is recorded on-chain. Fully transparent and auditable by anyone.",
+  },
+  {
+    icon: Globe,
+    title: "Open Standard",
+    description:
+      "Built on the x402 protocol — no vendor lock-in, works with any compliant provider.",
+  },
+  {
+    icon: Zap,
+    title: "Base L2",
+    description:
+      "Transactions settle on Base for sub-cent gas fees and near-instant finality.",
+  },
+];
 
 export function FeaturesSection() {
-  const t = useTranslations("features");
-
-  const indices = [0, 1, 2, 3, 4, 5] as const;
-
   return (
     <section id="features" className="bg-muted/40 py-24 sm:py-32">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <SectionHeading title={t("title")} subtitle={t("subtitle")} />
+        <SectionHeading
+          title="Why web3-ai?"
+          subtitle="AI inference should be open, affordable, and verifiable."
+        />
         <div className="mt-16 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {indices.map((i) => (
+          {features.map((feature, i) => (
             <FeatureCard
               key={i}
-              icon={featureIcons[i]}
-              title={t(`items.${i}.title`)}
-              description={t(`items.${i}.description`)}
+              icon={feature.icon}
+              title={feature.title}
+              description={feature.description}
             />
           ))}
         </div>
