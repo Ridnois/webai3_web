@@ -15,9 +15,8 @@ import { ConnectDialog } from "@/components/wallet/connect-dialog";
 import { useInference } from "@/hooks/use-inference";
 import { useAuth } from "@/hooks/use-auth";
 import { useCostEstimate } from "@/hooks/use-cost-estimate";
-import { useUsdcPayment } from "@/hooks/use-usdc-payment";
+import { useX402Payment } from "@/hooks/use-x402-payment";
 import { useWalletBalances } from "@/hooks/use-wallet-balances";
-import { env } from "@/lib/env";
 import { TASK_CONFIGS } from "@/types/task-config";
 import type { TaskType, ReplicateModel } from "@/types/inference";
 import {
@@ -45,28 +44,38 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
   );
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [estimatedCostFromServer, setEstimatedCostFromServer] = useState<number | null>(null);
   const inference = useInference();
   const { isConnected, isAuthenticated, isSigningIn, signIn } = useAuth();
   const pendingInput = useRef<Record<string, unknown> | null>(null);
-  const inferenceTriggeredRef = useRef(false);
+  const paymentRequirementsRef = useRef<string | null>(null);
   const { address, chainId } = useAccount();
   const { usdcFormatted } = useWalletBalances(address, chainId);
   const costEstimate = useCostEstimate(task);
-  const receiverAddress = env.NEXT_PUBLIC_RECEIVER_ADDRESS ?? "";
-  const payment = useUsdcPayment(receiverAddress);
+  const x402Payment = useX402Payment();
 
-  // Show toast when inference fails
+  // Show toast when submit fails
   useEffect(() => {
-    if (inference.error) {
-      const msg = inference.error.message;
+    const err = inference.submit.error;
+    if (err) {
+      const msg = err.message;
       const isAuth = msg.includes("401") || msg.toLowerCase().includes("unauthorized");
       toast.error(isAuth ? "Authentication required" : "Inference failed", {
         description: isAuth
-          ? "Your session expired — please sign in again."
+          ? "Your session expired \u2014 please sign in again."
           : msg,
       });
     }
-  }, [inference.error]);
+  }, [inference.submit.error]);
+
+  // Show toast when request fails (non-402 errors)
+  useEffect(() => {
+    if (inference.request.error) {
+      toast.error("Request failed", {
+        description: inference.request.error.message,
+      });
+    }
+  }, [inference.request.error]);
 
   // After wallet connects, auto-sign-in if there's a pending inference
   useEffect(() => {
@@ -75,83 +84,98 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
     }
   }, [isConnected, isAuthenticated, isSigningIn, signIn]);
 
-  // After sign-in completes, open payment dialog if there's a pending inference
+  // After sign-in completes, fire the request phase if pending
   useEffect(() => {
-    if (isAuthenticated && pendingInput.current && selectedModel && !paymentDialogOpen) {
-      setPaymentDialogOpen(true);
-    }
-  }, [isAuthenticated, selectedModel, paymentDialogOpen]);
-
-  // When payment is confirmed, fire the inference with payment data
-  useEffect(() => {
-    if (
-      payment.status === "confirmed" &&
-      pendingInput.current &&
-      selectedModel &&
-      costEstimate.data &&
-      !inference.isPending
-    ) {
-      inferenceTriggeredRef.current = true;
-      inference.mutate({
+    if (isAuthenticated && pendingInput.current && selectedModel && !inference.request.isPending) {
+      inference.request.mutate({
         model: `${selectedModel.owner}/${selectedModel.name}`,
         task,
         input: pendingInput.current,
-        payment: {
-          txHash: payment.txHash!,
-          chainId: payment.chainId,
-          estimatedCostUsdc: costEstimate.data.estimatedCostUsdc,
-        },
       });
-      pendingInput.current = null;
     }
-  }, [payment.status, payment.txHash, payment.chainId, selectedModel, task, costEstimate.data, inference.isPending, inference.mutate]);
+  }, [isAuthenticated, selectedModel, task, inference.request.isPending, inference.request.mutate]);
 
-  // Close dialog and reset payment when inference completes
+  // When request returns payment-required, open payment dialog
   useEffect(() => {
-    if (inferenceTriggeredRef.current && inference.data && !inference.isPending) {
-      setPaymentDialogOpen(false);
-      payment.reset();
-      inferenceTriggeredRef.current = false;
+    if (inference.request.data?.phase === "payment-required") {
+      paymentRequirementsRef.current = inference.request.data.paymentRequirementsBase64;
+      setEstimatedCostFromServer(inference.request.data.estimatedCostUsdc);
+      setPaymentDialogOpen(true);
     }
-  }, [inference.data, inference.isPending, payment.reset]);
+  }, [inference.request.data]);
+
+  // When payment is signed, submit with the signed header
+  useEffect(() => {
+    if (
+      x402Payment.status === "signed" &&
+      x402Payment.paymentHeader &&
+      pendingInput.current &&
+      selectedModel &&
+      !inference.submit.isPending
+    ) {
+      inference.submit.mutate({
+        model: `${selectedModel.owner}/${selectedModel.name}`,
+        task,
+        input: pendingInput.current,
+        paymentSignatureBase64: x402Payment.paymentHeader,
+      });
+    }
+  }, [x402Payment.status, x402Payment.paymentHeader, selectedModel, task, inference.submit.isPending, inference.submit.mutate]);
+
+  // Close dialog and reset when inference completes
+  useEffect(() => {
+    if (inference.submit.data?.phase === "complete" && !inference.submit.isPending) {
+      setPaymentDialogOpen(false);
+      x402Payment.reset();
+      pendingInput.current = null;
+      paymentRequirementsRef.current = null;
+      setEstimatedCostFromServer(null);
+    }
+  }, [inference.submit.data, inference.submit.isPending, x402Payment.reset]);
 
   function handleSubmit(input: Record<string, unknown>) {
     if (!selectedModel) return;
 
-    // Not connected → open wallet connect dialog
+    // Not connected -> open wallet connect dialog
     if (!isConnected) {
       pendingInput.current = input;
       setConnectDialogOpen(true);
       return;
     }
 
-    // Connected but not signed in → trigger SIWE sign-in
+    // Connected but not signed in -> trigger SIWE sign-in
     if (!isAuthenticated) {
       pendingInput.current = input;
       signIn();
       return;
     }
 
-    // Authenticated → open payment dialog
+    // Authenticated -> fire request phase (will get 402)
     pendingInput.current = input;
-    setPaymentDialogOpen(true);
+    inference.request.mutate({
+      model: `${selectedModel.owner}/${selectedModel.name}`,
+      task,
+      input,
+    });
   }
 
   function handlePaymentConfirm() {
-    if (!costEstimate.data) return;
-    payment.sendPayment(costEstimate.data.estimatedCostUsdc);
+    if (!paymentRequirementsRef.current) return;
+    x402Payment.signPayment(paymentRequirementsRef.current);
   }
 
   function handlePaymentDialogOpenChange(open: boolean) {
     setPaymentDialogOpen(open);
     if (!open) {
       pendingInput.current = null;
-      payment.reset();
+      paymentRequirementsRef.current = null;
+      setEstimatedCostFromServer(null);
+      x402Payment.reset();
     }
   }
 
   function handlePaymentRetry() {
-    payment.reset();
+    x402Payment.reset();
   }
 
   const submitLabel = !isConnected
@@ -160,13 +184,25 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
       ? "Sign in to Run"
       : undefined;
 
+  const isLoading =
+    inference.request.isPending ||
+    inference.submit.isPending ||
+    isSigningIn ||
+    x402Payment.status === "signing";
+
   const loadingLabel = isSigningIn
     ? "Signing in..."
-    : payment.status === "approving"
-      ? "Approve in wallet..."
-      : payment.status === "confirming"
-        ? "Confirming payment..."
-        : "Running...";
+    : inference.request.isPending
+      ? "Requesting..."
+      : x402Payment.status === "signing"
+        ? "Sign in wallet..."
+        : inference.submit.isPending
+          ? "Running..."
+          : "Processing...";
+
+  // Use the submit result for display
+  const result = inference.submit.data?.response;
+  const submitError = inference.submit.error;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -216,7 +252,7 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
                 <InferenceForm
                   fields={config.fields}
                   selectedModel={selectedModel}
-                  isLoading={inference.isPending || isSigningIn || payment.status === "approving" || payment.status === "confirming"}
+                  isLoading={isLoading}
                   onSubmit={handleSubmit}
                   submitLabel={submitLabel}
                   loadingLabel={loadingLabel}
@@ -236,22 +272,22 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {inference.isPending && <InferenceLoading />}
+              {inference.submit.isPending && <InferenceLoading />}
 
-              {inference.data && !inference.isPending && (
+              {result && !inference.submit.isPending && (
                 <InferenceResult
-                  response={inference.data}
+                  response={result}
                   outputType={config.outputType}
                 />
               )}
 
-              {inference.error && !inference.isPending && (
+              {submitError && !inference.submit.isPending && (
                 <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-                  {inference.error.message}
+                  {submitError.message}
                 </div>
               )}
 
-              {!inference.data && !inference.isPending && !inference.error && (
+              {!result && !inference.submit.isPending && !submitError && (
                 <div className="flex flex-col items-center gap-3 py-16 text-center">
                   <div className="flex size-14 items-center justify-center rounded-full bg-muted">
                     <Sparkles className="size-6 text-muted-foreground/50" />
@@ -274,19 +310,17 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
         open={connectDialogOpen}
         onOpenChange={setConnectDialogOpen}
       />
-      {costEstimate.data && (
-        <PaymentConfirmDialog
-          open={paymentDialogOpen}
-          onOpenChange={handlePaymentDialogOpenChange}
-          estimatedCostUsdc={costEstimate.data.estimatedCostUsdc}
-          usdcBalance={usdcFormatted}
-          paymentStatus={payment.status}
-          paymentError={payment.error}
-          inferenceRunning={inference.isPending}
-          onConfirm={handlePaymentConfirm}
-          onRetry={handlePaymentRetry}
-        />
-      )}
+      <PaymentConfirmDialog
+        open={paymentDialogOpen}
+        onOpenChange={handlePaymentDialogOpenChange}
+        estimatedCostUsdc={estimatedCostFromServer ?? costEstimate.data?.estimatedCostUsdc ?? 0}
+        usdcBalance={usdcFormatted}
+        paymentStatus={x402Payment.status}
+        paymentError={x402Payment.error}
+        inferenceRunning={inference.submit.isPending}
+        onConfirm={handlePaymentConfirm}
+        onRetry={handlePaymentRetry}
+      />
     </div>
   );
 }

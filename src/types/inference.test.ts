@@ -85,11 +85,6 @@ describe("inferenceRequestSchema", () => {
     model: "owner/model-name",
     task: "text-to-image",
     input: { prompt: "a red cat" },
-    payment: {
-      txHash: "0x" + "ab".repeat(32),
-      chainId: 84532,
-      estimatedCostUsdc: 0.01,
-    },
   };
 
   it("accepts a valid request", () => {

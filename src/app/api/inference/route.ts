@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getReplicateClient } from "@/lib/replicate";
 import { inferenceRequestSchema } from "@/types/inference";
 import { requireAuth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { getDb } from "@/lib/db";
 import { inferences } from "@/lib/db/schema";
 import { uploadMediaToR2, getPresignedUrls } from "@/lib/r2";
@@ -10,10 +11,23 @@ import {
   extractMediaUrls,
   outputTypeForTask,
 } from "@/lib/inference-utils";
-import { verifyPayment } from "@/lib/verify-payment";
-import { actualCostUsdc, usdcToOnChainAmount } from "@/lib/pricing";
+import {
+  buildPaymentRequirementsResponse,
+  encodePaymentHeader,
+  decodePaymentHeader,
+  paymentPayloadSchema,
+  verifyWithFacilitator,
+  settleWithFacilitator,
+} from "@/lib/x402";
+import {
+  estimateCostUsdc,
+  actualCostUsdc,
+  usdcToOnChainAmount,
+} from "@/lib/pricing";
 import { getServerEnv } from "@/lib/server-env";
 import { eq } from "drizzle-orm";
+
+const EXPOSE_HEADERS = "Payment-Required, Payment-Response";
 
 export async function POST(request: NextRequest) {
   const auth = await requireAuth();
@@ -41,44 +55,91 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { model, task, input, payment } = parsed.data;
-  const db = getDb();
-  const outputType = outputTypeForTask(task);
+  const { model, task, input } = parsed.data;
   const env = getServerEnv();
   const ratePerSec = parseFloat(env.INFERENCE_RATE_PER_SEC);
 
-  // Verify payment on-chain
-  const expectedAmountMin = usdcToOnChainAmount(payment.estimatedCostUsdc);
-  const verifyResult = await verifyPayment({
-    txHash: payment.txHash as `0x${string}`,
-    chainId: payment.chainId,
-    expectedFrom: auth.address,
-    expectedAmountMin,
-  });
+  // Determine chain from session, default to Base Sepolia
+  const session = await getSession();
+  const chainId = session.chainId ?? 84532;
 
-  if (!verifyResult.valid) {
-    return NextResponse.json(
-      { error: `Payment verification failed: ${verifyResult.error}`, code: "PAYMENT_INVALID" },
-      { status: 402 }
+  const paymentSignatureHeader = request.headers.get("Payment-Signature");
+
+  // ─── Phase 1: No payment header → return 402 ───────────────────────────
+
+  if (!paymentSignatureHeader) {
+    const estimated = estimateCostUsdc(task, ratePerSec);
+    const amountOnChain = usdcToOnChainAmount(estimated);
+
+    const paymentRequirements = buildPaymentRequirementsResponse(
+      chainId,
+      amountOnChain,
+      "/api/inference"
+    );
+
+    const paymentRequiredHeader = encodePaymentHeader(paymentRequirements);
+
+    return new NextResponse(
+      JSON.stringify({
+        error: "Payment required",
+        code: "PAYMENT_REQUIRED",
+        estimatedCostUsdc: estimated,
+      }),
+      {
+        status: 402,
+        headers: {
+          "Content-Type": "application/json",
+          "Payment-Required": paymentRequiredHeader,
+          "Access-Control-Expose-Headers": EXPOSE_HEADERS,
+        },
+      }
     );
   }
 
-  // Check for duplicate txHash before running inference
-  const [existingTx] = await db
-    .select({ id: inferences.id })
-    .from(inferences)
-    .where(eq(inferences.paymentTxHash, payment.txHash));
+  // ─── Phase 2: Has payment header → verify, run, settle ─────────────────
 
-  if (existingTx) {
+  let paymentPayload;
+  try {
+    paymentPayload = decodePaymentHeader(paymentSignatureHeader, paymentPayloadSchema);
+  } catch {
     return NextResponse.json(
-      { error: "Transaction already used for a previous inference", code: "DUPLICATE_PAYMENT" },
-      { status: 409 }
+      { error: "Invalid Payment-Signature header", code: "PAYMENT_INVALID" },
+      { status: 400 }
     );
   }
 
-  const estimatedCost = payment.estimatedCostUsdc.toString();
-  const paymentTxHash = payment.txHash;
-  const paymentChainId = payment.chainId;
+  // Rebuild the payment requirement for verification
+  const estimated = estimateCostUsdc(task, ratePerSec);
+  const amountOnChain = usdcToOnChainAmount(estimated);
+  const paymentRequirements = buildPaymentRequirementsResponse(
+    chainId,
+    amountOnChain,
+    "/api/inference"
+  );
+  const paymentRequirement = paymentRequirements.paymentRequirements[0];
+
+  // Verify with facilitator
+  const verifyResult = await verifyWithFacilitator(paymentPayload, paymentRequirement);
+  if (!verifyResult.isValid) {
+    return new NextResponse(
+      JSON.stringify({
+        error: `Payment verification failed: ${verifyResult.invalidReason ?? "unknown"}`,
+        code: "PAYMENT_INVALID",
+      }),
+      {
+        status: 402,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Expose-Headers": EXPOSE_HEADERS,
+        },
+      }
+    );
+  }
+
+  // Run inference
+  const db = getDb();
+  const outputType = outputTypeForTask(task);
+  const estimatedCost = estimated.toString();
 
   try {
     const replicate = getReplicateClient();
@@ -91,16 +152,27 @@ export async function POST(request: NextRequest) {
     const actualCost = actualCostUsdc(predictTimeMs, ratePerSec);
     const actualCostStr = actualCost.toString();
 
+    // Settle with facilitator (after inference succeeds)
+    let settlementTxHash: string | undefined;
+    let settlementResponse;
+    try {
+      settlementResponse = await settleWithFacilitator(paymentPayload, paymentRequirement);
+      settlementTxHash = settlementResponse.transaction;
+    } catch (settleErr) {
+      // Log but don't fail — the signed authorization is still valid
+      console.error("Settlement failed (will retry later):", settleErr);
+    }
+
     const costFields = {
       estimatedCostUsdc: estimatedCost,
       actualCostUsdc: actualCostStr,
-      paymentTxHash,
-      paymentChainId,
+      paymentTxHash: settlementTxHash ?? null,
+      paymentChainId: chainId,
     };
 
     const costMetrics = {
       predictTimeMs,
-      estimatedCostUsdc: estimatedCost ? parseFloat(estimatedCost) : undefined,
+      estimatedCostUsdc: parseFloat(estimatedCost),
       actualCostUsdc: actualCost,
     };
 
@@ -114,7 +186,6 @@ export async function POST(request: NextRequest) {
       // Media output — upload to R2
       const mediaUrls = extractMediaUrls(output);
       if (mediaUrls.length > 0) {
-        // Insert pending record to get the ID
         const [record] = await db
           .insert(inferences)
           .values({
@@ -136,7 +207,6 @@ export async function POST(request: NextRequest) {
             )
           );
         } catch (uploadErr) {
-          // Update the existing pending record to failed (not insert a new one)
           const uploadMessage = uploadErr instanceof Error ? uploadErr.message : "Unknown upload error";
           try {
             await db
@@ -152,7 +222,6 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        // Update with final data
         await db
           .update(inferences)
           .set({ r2Keys, status: "succeeded" })
@@ -161,12 +230,22 @@ export async function POST(request: NextRequest) {
         const presignedUrls = await getPresignedUrls(r2Keys);
         responseOutput = presignedUrls.length === 1 ? presignedUrls[0] : presignedUrls;
 
-        return NextResponse.json({
+        const responseBody = JSON.stringify({
           id: record.id,
           output: responseOutput,
           status: "succeeded",
           metrics: costMetrics,
         });
+
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+          "Access-Control-Expose-Headers": EXPOSE_HEADERS,
+        };
+        if (settlementResponse) {
+          headers["Payment-Response"] = encodePaymentHeader(settlementResponse);
+        }
+
+        return new NextResponse(responseBody, { status: 200, headers });
       }
     }
 
@@ -187,16 +266,26 @@ export async function POST(request: NextRequest) {
       })
       .returning({ id: inferences.id });
 
-    return NextResponse.json({
+    const responseBody = JSON.stringify({
       id: record.id,
       output: responseOutput,
       status: "succeeded",
       metrics: costMetrics,
     });
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      "Access-Control-Expose-Headers": EXPOSE_HEADERS,
+    };
+    if (settlementResponse) {
+      headers["Payment-Response"] = encodePaymentHeader(settlementResponse);
+    }
+
+    return new NextResponse(responseBody, { status: 200, headers });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
 
-    // Best-effort: persist the failure with payment data
+    // Best-effort: persist the failure
     try {
       await db.insert(inferences).values({
         userAddress: auth.address,
@@ -207,8 +296,7 @@ export async function POST(request: NextRequest) {
         status: "failed",
         errorMessage: message,
         estimatedCostUsdc: estimatedCost,
-        paymentTxHash,
-        paymentChainId,
+        paymentChainId: chainId,
       });
     } catch {
       // DB insert failed — don't mask the original error

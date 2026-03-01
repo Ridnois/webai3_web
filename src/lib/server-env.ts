@@ -15,6 +15,11 @@ const serverEnvSchema = z.object({
     .string()
     .regex(/^0x[0-9a-fA-F]{40}$/, "RECEIVER_ADDRESS must be a valid Ethereum address"),
   INFERENCE_RATE_PER_SEC: z.string().optional().default("0.001"),
+  X402_FACILITATOR_URL: z
+    .string()
+    .url()
+    .optional()
+    .default("https://www.x402.org/facilitator"),
 });
 
 export function getServerEnv() {

@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatUsdc } from "@/lib/pricing";
-import type { PaymentStatus } from "@/hooks/use-usdc-payment";
+import type { PaymentStatus } from "@/hooks/use-x402-payment";
 import { Loader2 } from "lucide-react";
 
 interface PaymentConfirmDialogProps {
@@ -27,10 +27,9 @@ interface PaymentConfirmDialogProps {
 
 const STATUS_LABELS: Record<PaymentStatus, string> = {
   idle: "",
-  approving: "Approve in wallet...",
-  confirming: "Confirming transaction...",
-  confirmed: "Payment confirmed",
-  error: "Payment failed",
+  signing: "Sign in wallet... (no gas required!)",
+  signed: "Signed",
+  error: "Signing failed",
 };
 
 export function PaymentConfirmDialog({
@@ -47,8 +46,7 @@ export function PaymentConfirmDialog({
   const balanceNum = usdcBalance ? parseFloat(usdcBalance) : 0;
   const insufficient = balanceNum < estimatedCostUsdc;
   const isProcessing =
-    paymentStatus === "approving" ||
-    paymentStatus === "confirming" ||
+    paymentStatus === "signing" ||
     inferenceRunning;
 
   return (
@@ -57,7 +55,7 @@ export function PaymentConfirmDialog({
         <DialogHeader>
           <DialogTitle>Confirm Payment</DialogTitle>
           <DialogDescription>
-            Pay for this inference with USDC.
+            Authorize a gasless USDC transfer for this inference.
           </DialogDescription>
         </DialogHeader>
 
@@ -70,7 +68,7 @@ export function PaymentConfirmDialog({
             <div className="mt-1 flex items-center justify-between">
               <span className="text-muted-foreground">Your USDC balance</span>
               <span className={insufficient ? "font-semibold text-destructive" : "font-semibold"}>
-                {usdcBalance !== undefined ? `$${usdcBalance}` : "—"}
+                {usdcBalance !== undefined ? `$${usdcBalance}` : "\u2014"}
               </span>
             </div>
           </div>
@@ -94,12 +92,12 @@ export function PaymentConfirmDialog({
         <DialogFooter>
           {paymentStatus === "error" ? (
             <Button onClick={onRetry} className="w-full sm:w-auto">
-              Retry Payment
+              Retry
             </Button>
           ) : (
             <Button
               onClick={onConfirm}
-              disabled={insufficient || isProcessing || paymentStatus === "confirmed"}
+              disabled={insufficient || isProcessing || paymentStatus === "signed"}
               className="w-full sm:w-auto"
             >
               {isProcessing ? (
@@ -108,7 +106,7 @@ export function PaymentConfirmDialog({
                   Processing...
                 </>
               ) : (
-                `Pay ${formatUsdc(estimatedCostUsdc)} & Run`
+                `Sign & Run ${formatUsdc(estimatedCostUsdc)}`
               )}
             </Button>
           )}
