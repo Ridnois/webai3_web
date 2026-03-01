@@ -21,8 +21,15 @@ export async function GET(request: NextRequest) {
   try {
     const replicate = getReplicateClient();
     const collection = await replicate.collections.get(config.collectionSlug);
+    const seen = new Set<string>();
     const models = (collection.models ?? [])
       .sort((a, b) => b.run_count - a.run_count)
+      .filter((m) => {
+        const key = `${m.owner}/${m.name}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
       .slice(0, 20)
       .map((m) => ({
         owner: m.owner,

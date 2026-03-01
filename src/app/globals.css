@@ -124,3 +124,54 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Sonner toast overrides — match app design tokens */
+[data-sonner-toaster] {
+  --normal-bg: var(--card);
+  --normal-border: var(--border);
+  --normal-text: var(--card-foreground);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+[data-sonner-toast] {
+  border-radius: var(--radius-xl) !important;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06) !important;
+  padding: 1rem 1.25rem !important;
+  gap: 0.5rem !important;
+}
+
+[data-sonner-toast] [data-title] {
+  font-weight: 500 !important;
+  font-size: 0.875rem !important;
+  line-height: 1.25rem !important;
+}
+
+[data-sonner-toast] [data-description] {
+  font-size: 0.8125rem !important;
+  line-height: 1.25rem !important;
+  opacity: 0.72 !important;
+}
+
+[data-sonner-toast][data-type="error"] {
+  --normal-bg: oklch(0.971 0.013 17.38);
+  --normal-border: oklch(0.577 0.245 27.325 / 0.25);
+  --normal-text: oklch(0.444 0.177 26.899);
+}
+
+.dark [data-sonner-toast][data-type="error"] {
+  --normal-bg: oklch(0.258 0.042 25.723);
+  --normal-border: oklch(0.704 0.191 22.216 / 0.25);
+  --normal-text: oklch(0.871 0.098 22.02);
+}
+
+[data-sonner-toast][data-type="success"] {
+  --normal-bg: oklch(0.962 0.015 155.826);
+  --normal-border: oklch(0.518 0.16 163.922 / 0.25);
+  --normal-text: oklch(0.365 0.108 159.413);
+}
+
+.dark [data-sonner-toast][data-type="success"] {
+  --normal-bg: oklch(0.235 0.04 155.826);
+  --normal-border: oklch(0.518 0.16 163.922 / 0.25);
+  --normal-text: oklch(0.792 0.109 151.328);
+}

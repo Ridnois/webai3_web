@@ -6,6 +6,7 @@ import {
   pgEnum,
   jsonb,
   integer,
+  numeric,
 } from "drizzle-orm/pg-core";
 
 export const taskTypeEnum = pgEnum("task_type", [
@@ -50,6 +51,10 @@ export const inferences = pgTable("inferences", {
   status: inferenceStatusEnum("status").notNull().default("pending"),
   errorMessage: text("error_message"),
   predictTimeMs: integer("predict_time_ms"),
+  estimatedCostUsdc: numeric("estimated_cost_usdc", { precision: 18, scale: 6 }),
+  actualCostUsdc: numeric("actual_cost_usdc", { precision: 18, scale: 6 }),
+  paymentTxHash: text("payment_tx_hash").unique(),
+  paymentChainId: integer("payment_chain_id"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

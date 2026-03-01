@@ -15,6 +15,7 @@ interface InferenceFormProps {
   isLoading: boolean;
   onSubmit: (input: Record<string, unknown>) => void;
   submitLabel?: string;
+  loadingLabel?: string;
 }
 
 export function InferenceForm({
@@ -23,6 +24,7 @@ export function InferenceForm({
   isLoading,
   onSubmit,
   submitLabel,
+  loadingLabel,
 }: InferenceFormProps) {
   const [values, setValues] = useState<Record<string, string | number>>(() => {
     const defaults: Record<string, string | number> = {};
@@ -101,7 +103,7 @@ export function InferenceForm({
         {isLoading ? (
           <>
             <Loader2 className="animate-spin" />
-            Running...
+            {loadingLabel ?? "Running..."}
           </>
         ) : (
           (submitLabel ?? "Run Inference")

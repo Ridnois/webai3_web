@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Toaster } from "sonner";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { Web3Provider } from "@/providers/web3-provider";
@@ -35,6 +36,14 @@ export default function RootLayout({
           <SiteHeader />
           <main>{children}</main>
           <SiteFooter />
+          <Toaster
+            position="bottom-right"
+            theme="system"
+            offset={16}
+            gap={8}
+            duration={6000}
+            closeButton
+          />
         </Web3Provider>
       </body>
     </html>

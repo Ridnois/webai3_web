@@ -24,6 +24,7 @@ export interface TaskConfig {
   collectionSlug: string;
   outputType: OutputType;
   fields: InputField[];
+  estimatedSeconds: number;
 }
 
 export const TASK_CONFIGS: Record<TaskType, TaskConfig> = {
@@ -35,6 +36,7 @@ export const TASK_CONFIGS: Record<TaskType, TaskConfig> = {
     icon: "ImagePlus",
     collectionSlug: "text-to-image",
     outputType: "image",
+    estimatedSeconds: 10,
     fields: [
       {
         name: "prompt",
@@ -69,6 +71,7 @@ export const TASK_CONFIGS: Record<TaskType, TaskConfig> = {
     icon: "MessageSquareText",
     collectionSlug: "language-models",
     outputType: "text",
+    estimatedSeconds: 3,
     fields: [
       {
         name: "prompt",
@@ -97,6 +100,7 @@ export const TASK_CONFIGS: Record<TaskType, TaskConfig> = {
     icon: "AudioLines",
     collectionSlug: "text-to-audio",
     outputType: "audio",
+    estimatedSeconds: 15,
     fields: [
       {
         name: "prompt",

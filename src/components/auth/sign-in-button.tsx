@@ -1,16 +1,24 @@
 "use client";
 
-import { useAccount } from "wagmi";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { Shield, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Shield, ShieldCheck, Loader2 } from "lucide-react";
 
 export function SignInButton() {
-  const { isConnected } = useAccount();
-  const { isAuthenticated, isLoading, isSigningIn, signIn } = useAuth();
+  const { isAuthenticated, isLoading, isConnected, isSigningIn, signIn } = useAuth();
 
-  if (!isConnected || isAuthenticated || isLoading) {
+  if (!isConnected || isLoading) {
     return null;
+  }
+
+  if (isAuthenticated) {
+    return (
+      <Badge variant="secondary" className="gap-1.5 py-1">
+        <ShieldCheck className="size-3.5 text-green-500" />
+        Connected
+      </Badge>
+    );
   }
 
   return (

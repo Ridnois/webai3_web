@@ -1,5 +1,5 @@
 import type { Address } from "viem";
-import { base, baseSepolia } from "viem/chains";
+import { base, baseSepolia, foundry } from "viem/chains";
 
 interface UsdcConfig {
   address: Address;
@@ -12,6 +12,11 @@ const usdcContracts: Record<number, UsdcConfig> = {
     decimals: 6,
   },
   [baseSepolia.id]: {
+    address: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    decimals: 6,
+  },
+  // Local dev chain (Anvil fork of Base Sepolia) — same USDC contract address
+  [foundry.id]: {
     address: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
     decimals: 6,
   },

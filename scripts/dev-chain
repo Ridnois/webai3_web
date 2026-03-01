@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# ─────────────────────────────────────────────────────────────────────────────
+# Start a local Anvil node that forks Base Sepolia.
+#
+# Prerequisites:
+#   curl -L https://foundry.paradigm.xyz | bash && foundryup
+#
+# The fork gives you:
+#   • chainId 31337  (Foundry default)
+#   • USDC contract at 0x036CbD53842c5426634e7929541eC2318f3dCF7e (from Base Sepolia)
+#   • 10 pre-funded accounts with 10 000 ETH each
+#
+# Default mnemonic (Anvil standard):
+#   test test test test test test test test test test test junk
+#
+# Account #0: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+# Account #1: 0x70997970C51812dc3A010C7d01b50e0d17dc79C8
+# ─────────────────────────────────────────────────────────────────────────────
+set -euo pipefail
+
+# Ensure Foundry binaries are on PATH
+export PATH="$HOME/.foundry/bin:$PATH"
+
+FORK_URL="${BASE_SEPOLIA_FORK_URL:-https://sepolia.base.org}"
+
+if ! command -v anvil &>/dev/null; then
+  echo "Error: anvil not found. Install Foundry first:"
+  echo "  curl -L https://foundry.paradigm.xyz | bash && foundryup"
+  exit 1
+fi
+
+echo "Starting Anvil fork of Base Sepolia..."
+echo "  Fork URL : $FORK_URL"
+echo "  Chain ID : 31337"
+echo "  RPC      : http://127.0.0.1:8545"
+echo ""
+
+exec anvil \
+  --fork-url "$FORK_URL" \
+  --chain-id 31337 \
+  --accounts 10 \
+  --balance 10000 \
+  --block-time 1 \
+  --host 127.0.0.1 \
+  --port 8545

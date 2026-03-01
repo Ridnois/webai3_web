@@ -17,10 +17,17 @@ export const replicateModelSchema = z.object({
 });
 export type ReplicateModel = z.infer<typeof replicateModelSchema>;
 
+export const paymentSchema = z.object({
+  txHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
+  chainId: z.number(),
+  estimatedCostUsdc: z.number(),
+});
+
 export const inferenceRequestSchema = z.object({
   model: z.string().min(1, "Model is required"),
   task: taskTypeSchema,
   input: z.record(z.unknown()),
+  payment: paymentSchema,
 });
 export type InferenceRequest = z.infer<typeof inferenceRequestSchema>;
 
@@ -31,6 +38,8 @@ export const inferenceResponseSchema = z.object({
   metrics: z
     .object({
       predictTimeMs: z.number().optional(),
+      estimatedCostUsdc: z.number().optional(),
+      actualCostUsdc: z.number().optional(),
     })
     .optional(),
   error: z.string().optional(),

@@ -12,7 +12,9 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "chain:start": "./scripts/dev-chain",
+    "chain:fund": "./scripts/dev-fund"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.997.0",
@@ -30,6 +32,7 @@
     "react-dom": "19.2.3",
     "replicate": "^1.4.0",
     "siwe": "^3.0.0",
+    "sonner": "^2.0.7",
     "tailwind-merge": "^3.5.0",
     "viem": "^2.46.3",
     "wagmi": "^2.19.5",

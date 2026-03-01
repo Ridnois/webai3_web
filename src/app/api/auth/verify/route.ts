@@ -3,7 +3,6 @@ import { SiweMessage } from "siwe";
 import { getSession } from "@/lib/session";
 import { getDb } from "@/lib/db";
 import { users } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
 
 export async function POST(request: NextRequest) {
   let body: { message: string; signature: string };
@@ -25,17 +24,40 @@ export async function POST(request: NextRequest) {
 
   const session = await getSession();
 
+  // 1. Verify SIWE signature
+  if (!session.nonce) {
+    console.error("[auth/verify] No nonce in session — cookie may not have persisted from /api/auth/nonce");
+    return NextResponse.json(
+      { error: "Session nonce missing. Your session may have expired — please try again.", code: "NONCE_MISSING" },
+      { status: 401 }
+    );
+  }
+
+  let verified;
   try {
     const siweMessage = new SiweMessage(body.message);
-    const { data: verified } = await siweMessage.verify({
+    ({ data: verified } = await siweMessage.verify({
       signature: body.signature,
       nonce: session.nonce,
-    });
+    }));
+  } catch (err) {
+    const raw = err instanceof Error ? err.message : String(err);
+    const detail = raw.toLowerCase().includes("nonce")
+      ? "Nonce mismatch — your session may have expired. Please try again."
+      : raw.toLowerCase().includes("signature")
+        ? "The wallet signature could not be verified."
+        : raw;
+    console.error("[auth/verify] SIWE verification failed:", raw);
+    return NextResponse.json(
+      { error: detail, code: "VERIFICATION_FAILED" },
+      { status: 401 }
+    );
+  }
 
-    const address = verified.address.toLowerCase();
+  // 2. Upsert user in database
+  const address = verified.address.toLowerCase();
+  try {
     const db = getDb();
-
-    // Upsert user
     await db
       .insert(users)
       .values({ address })
@@ -43,19 +65,24 @@ export async function POST(request: NextRequest) {
         target: users.address,
         set: { lastSeenAt: new Date() },
       });
-
-    session.address = address;
-    session.chainId = verified.chainId;
-    session.nonce = undefined;
-    await session.save();
-
-    return NextResponse.json({ address, chainId: verified.chainId });
   } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "Signature verification failed";
+    const raw = err instanceof Error ? err.message : String(err);
+    console.error("[auth/verify] DB upsert failed:", raw);
+    const detail = raw.includes("does not exist")
+      ? "Database table missing — run `pnpm db:push` to create tables."
+      : raw.includes("connect")
+        ? "Cannot connect to the database. Check DATABASE_URL."
+        : `Database error: ${raw}`;
     return NextResponse.json(
-      { error: message, code: "VERIFICATION_FAILED" },
-      { status: 401 }
+      { error: detail, code: "DB_ERROR" },
+      { status: 500 }
     );
   }
+
+  session.address = address;
+  session.chainId = verified.chainId;
+  session.nonce = undefined;
+  await session.save();
+
+  return NextResponse.json({ address, chainId: verified.chainId });
 }
