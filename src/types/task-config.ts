@@ -21,7 +21,6 @@ export interface TaskConfig {
   label: string;
   description: string;
   icon: string;
-  collectionSlug: string;
   outputType: OutputType;
   fields: InputField[];
   estimatedSeconds: number;
@@ -34,7 +33,6 @@ export const TASK_CONFIGS: Record<TaskType, TaskConfig> = {
     description:
       "Generate images from text prompts using AI diffusion models.",
     icon: "ImagePlus",
-    collectionSlug: "text-to-image",
     outputType: "image",
     estimatedSeconds: 10,
     fields: [
@@ -69,7 +67,6 @@ export const TASK_CONFIGS: Record<TaskType, TaskConfig> = {
     description:
       "Generate, summarize, translate, or transform text with language models.",
     icon: "MessageSquareText",
-    collectionSlug: "language-models",
     outputType: "text",
     estimatedSeconds: 3,
     fields: [
@@ -98,7 +95,6 @@ export const TASK_CONFIGS: Record<TaskType, TaskConfig> = {
     description:
       "Generate music, sound effects, or speech from a text description.",
     icon: "AudioLines",
-    collectionSlug: "text-to-audio",
     outputType: "audio",
     estimatedSeconds: 15,
     fields: [

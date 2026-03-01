@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useInferenceDetail } from "@/hooks/use-inference-detail";
+import { useAuth } from "@/hooks/use-auth";
 import { TextResult } from "@/components/inference/text-result";
 import { ImageResult } from "@/components/inference/image-result";
 import { AudioResult } from "@/components/inference/audio-result";
@@ -10,17 +11,37 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Shield } from "lucide-react";
 
 export default function InferenceDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const { isAuthenticated, isLoading: authLoading, signIn, isSigningIn } = useAuth();
   const { data, isLoading, error } = useInferenceDetail(id);
 
-  if (isLoading) {
+  if (authLoading || isLoading) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
         <Skeleton className="mb-4 h-8 w-48" />
         <Skeleton className="h-64 w-full rounded-lg" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="flex flex-col items-center gap-4 rounded-lg border p-8 text-center">
+          <Shield className="size-10 text-muted-foreground/60" />
+          <div>
+            <p className="text-base font-medium">Sign in to view this inference</p>
+            <p className="text-sm text-muted-foreground">
+              Your history is tied to your signed wallet session.
+            </p>
+          </div>
+          <Button onClick={signIn} disabled={isSigningIn} variant="outline">
+            {isSigningIn ? "Signing..." : "Sign In"}
+          </Button>
+        </div>
       </div>
     );
   }
@@ -98,6 +119,11 @@ export default function InferenceDetailPage() {
 
             {data.status === "succeeded" && (
               <>
+                {data.mediaError && (
+                  <div className="mb-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+                    Media is stored, but URLs could not be generated right now: {data.mediaError}
+                  </div>
+                )}
                 {data.outputType === "text" && <TextResult output={output} />}
                 {data.outputType === "image" && <ImageResult output={output} />}
                 {data.outputType === "audio" && <AudioResult output={output} />}

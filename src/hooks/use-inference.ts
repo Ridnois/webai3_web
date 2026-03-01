@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { InferenceResponse } from "@/types/inference";
+import { parseInferenceApiError } from "@/lib/inference-error";
 
 interface InferenceRequestInput {
   model: string;
@@ -44,8 +45,7 @@ async function requestInference(
   }
 
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error ?? `Request failed (${res.status})`);
+    throw await parseInferenceApiError(res, "Request failed", "request");
   }
 
   // Shouldn't get 200 without payment, but handle gracefully
@@ -71,8 +71,7 @@ async function submitInference(
   });
 
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error ?? `Inference failed (${res.status})`);
+    throw await parseInferenceApiError(res, "Inference failed", "submit");
   }
 
   const response: InferenceResponse = await res.json();

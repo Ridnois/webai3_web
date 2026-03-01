@@ -13,18 +13,22 @@ interface InferenceFormProps {
   fields: InputField[];
   selectedModel: ReplicateModel | null;
   isLoading: boolean;
+  isSubmitDisabled?: boolean;
   onSubmit: (input: Record<string, unknown>) => void;
   submitLabel?: string;
   loadingLabel?: string;
+  helperText?: string;
 }
 
 export function InferenceForm({
   fields,
   selectedModel,
   isLoading,
+  isSubmitDisabled,
   onSubmit,
   submitLabel,
   loadingLabel,
+  helperText,
 }: InferenceFormProps) {
   const [values, setValues] = useState<Record<string, string | number>>(() => {
     const defaults: Record<string, string | number> = {};
@@ -99,7 +103,11 @@ export function InferenceForm({
           )}
         </div>
       ))}
-      <Button type="submit" disabled={!selectedModel || isLoading} size="lg">
+      <Button
+        type="submit"
+        disabled={!selectedModel || isLoading || isSubmitDisabled}
+        size="lg"
+      >
         {isLoading ? (
           <>
             <Loader2 className="animate-spin" />
@@ -113,6 +121,9 @@ export function InferenceForm({
         <p className="text-xs text-muted-foreground text-center">
           Select a model above to get started
         </p>
+      )}
+      {helperText && (
+        <p className="text-xs text-destructive text-center">{helperText}</p>
       )}
     </form>
   );

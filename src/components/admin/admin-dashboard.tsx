@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 
 function formatDuration(ms: number): string {
   const seconds = Math.floor(ms / 1000);
@@ -73,7 +74,13 @@ function LoadingSkeleton() {
 }
 
 export function AdminDashboard() {
-  const { isAdmin, isLoading: isAuthLoading } = useAuth();
+  const {
+    isAdmin,
+    isAuthenticated,
+    isLoading: isAuthLoading,
+    isSigningIn,
+    signIn,
+  } = useAuth();
   const { data, isLoading, error } = useAdminMetrics();
 
   if (isAuthLoading) {
@@ -81,6 +88,24 @@ export function AdminDashboard() {
   }
 
   if (!isAdmin) {
+    if (!isAuthenticated) {
+      return (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-lg font-medium">Admin sign-in required</p>
+            <p className="text-sm text-muted-foreground">
+              Connect your admin wallet and sign in to continue.
+            </p>
+            <div className="mt-4">
+              <Button onClick={signIn} disabled={isSigningIn} variant="outline">
+                {isSigningIn ? "Signing..." : "Sign In"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
     return (
       <Card>
         <CardContent className="py-12 text-center">

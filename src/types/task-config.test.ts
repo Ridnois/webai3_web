@@ -26,10 +26,6 @@ describe("TASK_CONFIGS", () => {
       expect(config.icon.length).toBeGreaterThan(0);
     });
 
-    it("has a non-empty collectionSlug", () => {
-      expect(config.collectionSlug.length).toBeGreaterThan(0);
-    });
-
     it("task field matches its key", () => {
       expect(config.task).toBe(task);
     });

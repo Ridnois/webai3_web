@@ -194,6 +194,63 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [isConnected, isAuthenticated, signOut]);
 
+  // Auto sign-out when connected wallet account no longer matches SIWE session.
+  // This guarantees the app reacts immediately to account switches in the wallet.
+  const normalizedConnectedAddress = address?.toLowerCase();
+  const normalizedSessionAddress = session.data?.address?.toLowerCase() ?? null;
+  const lastHandledMismatchRef = useRef<string | null>(null);
+  const autoSignInAfterAccountChangeRef = useRef(false);
+
+  useEffect(() => {
+    const hasMismatch =
+      Boolean(isConnected) &&
+      Boolean(normalizedConnectedAddress) &&
+      Boolean(normalizedSessionAddress) &&
+      normalizedConnectedAddress !== normalizedSessionAddress;
+
+    if (!hasMismatch) {
+      lastHandledMismatchRef.current = null;
+      return;
+    }
+
+    if (lastHandledMismatchRef.current === normalizedConnectedAddress) {
+      return;
+    }
+    lastHandledMismatchRef.current = normalizedConnectedAddress ?? null;
+    autoSignInAfterAccountChangeRef.current = true;
+
+    toast.info("Wallet account changed", {
+      description: "Detected a different wallet account. Please sign in again.",
+    });
+    signOut();
+  }, [isConnected, normalizedConnectedAddress, normalizedSessionAddress, signOut]);
+
+  // After account switch sign-out, automatically prompt SIWE re-auth with the new account.
+  useEffect(() => {
+    if (!isConnected) {
+      autoSignInAfterAccountChangeRef.current = false;
+      return;
+    }
+
+    if (
+      autoSignInAfterAccountChangeRef.current &&
+      !isAuthenticated &&
+      !signInMutation.isPending &&
+      !signOutMutation.isPending &&
+      normalizedConnectedAddress
+    ) {
+      autoSignInAfterAccountChangeRef.current = false;
+      signIn();
+    }
+  }, [
+    isConnected,
+    isAuthenticated,
+    normalizedConnectedAddress,
+    signIn,
+    signInMutation.isPending,
+    signOutMutation.isPending,
+  ]);
+
   const value: AuthContextValue = {
     isAuthenticated,
     isAdmin: session.data?.isAdmin ?? false,

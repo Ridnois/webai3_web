@@ -18,6 +18,7 @@ interface PaymentConfirmDialogProps {
   onOpenChange: (open: boolean) => void;
   estimatedCostUsdc: number;
   usdcBalance: string | undefined;
+  insufficientFunds: boolean;
   paymentStatus: PaymentStatus;
   paymentError: Error | null;
   inferenceRunning: boolean;
@@ -37,14 +38,13 @@ export function PaymentConfirmDialog({
   onOpenChange,
   estimatedCostUsdc,
   usdcBalance,
+  insufficientFunds,
   paymentStatus,
   paymentError,
   inferenceRunning,
   onConfirm,
   onRetry,
 }: PaymentConfirmDialogProps) {
-  const balanceNum = usdcBalance ? parseFloat(usdcBalance) : 0;
-  const insufficient = balanceNum < estimatedCostUsdc;
   const isProcessing =
     paymentStatus === "signing" ||
     inferenceRunning;
@@ -67,7 +67,7 @@ export function PaymentConfirmDialog({
             </div>
             <div className="mt-1 flex items-center justify-between">
               <span className="text-muted-foreground">Your USDC balance</span>
-              <span className={insufficient ? "font-semibold text-destructive" : "font-semibold"}>
+              <span className={insufficientFunds ? "font-semibold text-destructive" : "font-semibold"}>
                 {usdcBalance !== undefined ? `$${usdcBalance}` : "\u2014"}
               </span>
             </div>
@@ -97,7 +97,7 @@ export function PaymentConfirmDialog({
           ) : (
             <Button
               onClick={onConfirm}
-              disabled={insufficient || isProcessing || paymentStatus === "signed"}
+              disabled={insufficientFunds || isProcessing || paymentStatus === "signed"}
               className="w-full sm:w-auto"
             >
               {isProcessing ? (

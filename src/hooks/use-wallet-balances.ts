@@ -8,6 +8,7 @@ interface WalletBalances {
   nativeFormatted: string | undefined;
   nativeSymbol: string | undefined;
   usdcFormatted: string | undefined;
+  usdcRaw: bigint | undefined;
   isLoading: boolean;
 }
 
@@ -57,6 +58,7 @@ export function useWalletBalances(
     nativeFormatted,
     nativeSymbol: nativeBalance?.symbol,
     usdcFormatted,
+    usdcRaw,
     isLoading: nativeLoading || usdcLoading,
   };
 }
