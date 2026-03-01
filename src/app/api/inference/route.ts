@@ -5,52 +5,15 @@ import { requireAuth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { inferences } from "@/lib/db/schema";
 import { uploadMediaToR2, getPresignedUrls } from "@/lib/r2";
-import type { TaskType } from "@/types/inference";
-
-function isFileOutput(value: unknown): value is { url(): URL } {
-  return (
-    value !== null &&
-    typeof value === "object" &&
-    "url" in value &&
-    typeof (value as Record<string, unknown>).url === "function"
-  );
-}
-
-function normalizeOutput(output: unknown): unknown {
-  if (isFileOutput(output)) {
-    return output.url().href;
-  }
-  if (Array.isArray(output)) {
-    return output.map(normalizeOutput);
-  }
-  return output;
-}
-
-function extractMediaUrls(output: unknown): string[] {
-  const urls: string[] = [];
-
-  function walk(val: unknown) {
-    if (typeof val === "string" && val.startsWith("https://")) {
-      urls.push(val);
-    } else if (Array.isArray(val)) {
-      val.forEach(walk);
-    }
-  }
-
-  walk(output);
-  return urls;
-}
-
-function outputTypeForTask(task: TaskType): "text" | "image" | "audio" {
-  switch (task) {
-    case "text-to-image":
-      return "image";
-    case "text-to-sound":
-      return "audio";
-    default:
-      return "text";
-  }
-}
+import {
+  normalizeOutput,
+  extractMediaUrls,
+  outputTypeForTask,
+} from "@/lib/inference-utils";
+import { verifyPayment } from "@/lib/verify-payment";
+import { actualCostUsdc, usdcToOnChainAmount } from "@/lib/pricing";
+import { getServerEnv } from "@/lib/server-env";
+import { eq } from "drizzle-orm";
 
 export async function POST(request: NextRequest) {
   const auth = await requireAuth();
@@ -78,9 +41,44 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { model, task, input } = parsed.data;
+  const { model, task, input, payment } = parsed.data;
   const db = getDb();
   const outputType = outputTypeForTask(task);
+  const env = getServerEnv();
+  const ratePerSec = parseFloat(env.INFERENCE_RATE_PER_SEC);
+
+  // Verify payment on-chain
+  const expectedAmountMin = usdcToOnChainAmount(payment.estimatedCostUsdc);
+  const verifyResult = await verifyPayment({
+    txHash: payment.txHash as `0x${string}`,
+    chainId: payment.chainId,
+    expectedFrom: auth.address,
+    expectedAmountMin,
+  });
+
+  if (!verifyResult.valid) {
+    return NextResponse.json(
+      { error: `Payment verification failed: ${verifyResult.error}`, code: "PAYMENT_INVALID" },
+      { status: 402 }
+    );
+  }
+
+  // Check for duplicate txHash before running inference
+  const [existingTx] = await db
+    .select({ id: inferences.id })
+    .from(inferences)
+    .where(eq(inferences.paymentTxHash, payment.txHash));
+
+  if (existingTx) {
+    return NextResponse.json(
+      { error: "Transaction already used for a previous inference", code: "DUPLICATE_PAYMENT" },
+      { status: 409 }
+    );
+  }
+
+  const estimatedCost = payment.estimatedCostUsdc.toString();
+  const paymentTxHash = payment.txHash;
+  const paymentChainId = payment.chainId;
 
   try {
     const replicate = getReplicateClient();
@@ -90,6 +88,21 @@ export async function POST(request: NextRequest) {
     const rawOutput = await replicate.run(identifier, { input });
     const predictTimeMs = Date.now() - startTime;
     const output = normalizeOutput(rawOutput);
+    const actualCost = actualCostUsdc(predictTimeMs, ratePerSec);
+    const actualCostStr = actualCost.toString();
+
+    const costFields = {
+      estimatedCostUsdc: estimatedCost,
+      actualCostUsdc: actualCostStr,
+      paymentTxHash,
+      paymentChainId,
+    };
+
+    const costMetrics = {
+      predictTimeMs,
+      estimatedCostUsdc: estimatedCost ? parseFloat(estimatedCost) : undefined,
+      actualCostUsdc: actualCost,
+    };
 
     let r2Keys: string[] | null = null;
     let outputData: unknown = null;
@@ -112,17 +125,34 @@ export async function POST(request: NextRequest) {
             outputType,
             status: "pending",
             predictTimeMs,
+            ...costFields,
           })
           .returning({ id: inferences.id });
 
-        r2Keys = await Promise.all(
-          mediaUrls.map((url, i) =>
-            uploadMediaToR2(url, auth.address, record.id, i)
-          )
-        );
+        try {
+          r2Keys = await Promise.all(
+            mediaUrls.map((url, i) =>
+              uploadMediaToR2(url, auth.address, record.id, i)
+            )
+          );
+        } catch (uploadErr) {
+          // Update the existing pending record to failed (not insert a new one)
+          const uploadMessage = uploadErr instanceof Error ? uploadErr.message : "Unknown upload error";
+          try {
+            await db
+              .update(inferences)
+              .set({ status: "failed", errorMessage: uploadMessage })
+              .where(eq(inferences.id, record.id));
+          } catch {
+            // DB update failed — don't mask the original error
+          }
+          return NextResponse.json(
+            { error: uploadMessage, code: "INFERENCE_ERROR" },
+            { status: 502 }
+          );
+        }
 
         // Update with final data
-        const { eq } = await import("drizzle-orm");
         await db
           .update(inferences)
           .set({ r2Keys, status: "succeeded" })
@@ -135,7 +165,7 @@ export async function POST(request: NextRequest) {
           id: record.id,
           output: responseOutput,
           status: "succeeded",
-          metrics: { predictTimeMs },
+          metrics: costMetrics,
         });
       }
     }
@@ -153,6 +183,7 @@ export async function POST(request: NextRequest) {
         r2Keys,
         status: "succeeded",
         predictTimeMs,
+        ...costFields,
       })
       .returning({ id: inferences.id });
 
@@ -160,12 +191,12 @@ export async function POST(request: NextRequest) {
       id: record.id,
       output: responseOutput,
       status: "succeeded",
-      metrics: { predictTimeMs },
+      metrics: costMetrics,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
 
-    // Best-effort: persist the failure
+    // Best-effort: persist the failure with payment data
     try {
       await db.insert(inferences).values({
         userAddress: auth.address,
@@ -175,6 +206,9 @@ export async function POST(request: NextRequest) {
         outputType,
         status: "failed",
         errorMessage: message,
+        estimatedCostUsdc: estimatedCost,
+        paymentTxHash,
+        paymentChainId,
       });
     } catch {
       // DB insert failed — don't mask the original error

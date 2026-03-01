@@ -2,6 +2,7 @@
 
 import type { InferenceResponse } from "@/types/inference";
 import type { OutputType } from "@/types/task-config";
+import { formatUsdc } from "@/lib/pricing";
 import { TextResult } from "./text-result";
 import { ImageResult } from "./image-result";
 import { AudioResult } from "./audio-result";
@@ -29,9 +30,17 @@ export function InferenceResult({
       {outputType === "image" && <ImageResult output={response.output} />}
       {outputType === "audio" && <AudioResult output={response.output} />}
       {response.metrics?.predictTimeMs && (
-        <p className="text-xs text-muted-foreground text-right">
-          Completed in {(response.metrics.predictTimeMs / 1000).toFixed(1)}s
-        </p>
+        <div className="text-xs text-muted-foreground text-right space-y-0.5">
+          <p>Completed in {(response.metrics.predictTimeMs / 1000).toFixed(1)}s</p>
+          {response.metrics.actualCostUsdc !== undefined && (
+            <p>
+              Actual cost: {formatUsdc(response.metrics.actualCostUsdc)}
+              {response.metrics.estimatedCostUsdc !== undefined && (
+                <span className="ml-1">(est. {formatUsdc(response.metrics.estimatedCostUsdc)})</span>
+              )}
+            </p>
+          )}
+        </div>
       )}
     </div>
   );
