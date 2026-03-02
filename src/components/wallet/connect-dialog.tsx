@@ -1,6 +1,6 @@
 "use client";
 
-import { useConnect } from "wagmi";
+import { useConnect, useSwitchChain } from "wagmi";
 import { Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { defaultChain } from "@/lib/wagmi";
 
 interface ConnectDialogProps {
   open: boolean;
@@ -18,11 +19,20 @@ interface ConnectDialogProps {
 
 export function ConnectDialog({ open, onOpenChange }: ConnectDialogProps) {
   const { connectors, connect, isPending } = useConnect();
+  const { switchChain } = useSwitchChain();
 
   function handleConnect(connector: (typeof connectors)[number]) {
     connect(
       { connector },
-      { onSuccess: () => onOpenChange(false) },
+      {
+        onSuccess: (data) => {
+          // If the wallet connected on a different chain, switch to the default
+          if (data.chainId !== defaultChain.id) {
+            switchChain({ chainId: defaultChain.id });
+          }
+          onOpenChange(false);
+        },
+      },
     );
   }
 

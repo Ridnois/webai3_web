@@ -4,9 +4,11 @@ import type { Chain, Transport } from "viem";
 
 const enableDevChain = process.env.NEXT_PUBLIC_ENABLE_DEV_CHAIN === "true";
 
-const chains: readonly [Chain, ...Chain[]] = enableDevChain
-  ? [base, baseSepolia, foundry]
+export const chains: readonly [Chain, ...Chain[]] = enableDevChain
+  ? [foundry, base, baseSepolia]
   : [base, baseSepolia];
+
+export const defaultChain = chains[0];
 
 const transports: Record<number, Transport> = {
   [base.id]: http(),
@@ -14,7 +16,7 @@ const transports: Record<number, Transport> = {
 };
 
 if (enableDevChain) {
-  transports[foundry.id] = http();
+  transports[foundry.id] = http("http://127.0.0.1:8545");
 }
 
 export const wagmiConfig = createConfig({

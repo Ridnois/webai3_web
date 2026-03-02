@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { base, baseSepolia } from "viem/chains";
+import { base, baseSepolia, foundry } from "viem/chains";
 import { getUsdcConfig } from "./contracts";
 import { getServerEnv } from "./server-env";
 
@@ -8,6 +8,8 @@ import { getServerEnv } from "./server-env";
 const CAIP2_MAP: Record<number, string> = {
   [base.id]: "eip155:8453",
   [baseSepolia.id]: "eip155:84532",
+  // Local Anvil fork — maps to Base Sepolia for x402 facilitator compatibility
+  [foundry.id]: "eip155:84532",
 };
 
 const CHAIN_ID_MAP: Record<string, number> = Object.fromEntries(

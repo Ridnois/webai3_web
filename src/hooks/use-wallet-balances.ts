@@ -23,8 +23,9 @@ export function useWalletBalances(
     isLoading: nativeLoading,
   } = useBalance({
     address,
+    chainId,
     query: {
-      enabled: Boolean(address),
+      enabled: Boolean(address && chainId),
       retry: 2,
       retryDelay: 1500,
     },
@@ -38,6 +39,7 @@ export function useWalletBalances(
     address: usdcConfig?.address,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
+    chainId,
     query: {
       enabled: Boolean(address && usdcConfig),
       retry: 2,

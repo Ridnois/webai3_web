@@ -26,8 +26,10 @@ import {
 } from "@/lib/pricing";
 import { getServerEnv } from "@/lib/server-env";
 import { eq } from "drizzle-orm";
+import { foundry } from "viem/chains";
 
 const EXPOSE_HEADERS = "Payment-Required, Payment-Response";
+const isLocalDevChain = (id: number) => id === foundry.id;
 
 export async function POST(request: NextRequest) {
   const auth = await requireAuth();
@@ -118,22 +120,24 @@ export async function POST(request: NextRequest) {
   );
   const paymentRequirement = paymentRequirements.paymentRequirements[0];
 
-  // Verify with facilitator
-  const verifyResult = await verifyWithFacilitator(paymentPayload, paymentRequirement);
-  if (!verifyResult.isValid) {
-    return new NextResponse(
-      JSON.stringify({
-        error: `Payment verification failed: ${verifyResult.invalidReason ?? "unknown"}`,
-        code: "PAYMENT_INVALID",
-      }),
-      {
-        status: 402,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Expose-Headers": EXPOSE_HEADERS,
-        },
-      }
-    );
+  // Verify with facilitator (skip on local dev chain — facilitator doesn't support Anvil)
+  if (!isLocalDevChain(chainId)) {
+    const verifyResult = await verifyWithFacilitator(paymentPayload, paymentRequirement);
+    if (!verifyResult.isValid) {
+      return new NextResponse(
+        JSON.stringify({
+          error: `Payment verification failed: ${verifyResult.invalidReason ?? "unknown"}`,
+          code: "PAYMENT_INVALID",
+        }),
+        {
+          status: 402,
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Expose-Headers": EXPOSE_HEADERS,
+          },
+        }
+      );
+    }
   }
 
   // Run inference
@@ -152,15 +156,21 @@ export async function POST(request: NextRequest) {
     const actualCost = actualCostUsdc(predictTimeMs, ratePerSec);
     const actualCostStr = actualCost.toString();
 
-    // Settle with facilitator (after inference succeeds)
+    // Settle with facilitator (skip on local dev chain)
     let settlementTxHash: string | undefined;
     let settlementResponse;
-    try {
-      settlementResponse = await settleWithFacilitator(paymentPayload, paymentRequirement);
-      settlementTxHash = settlementResponse.transaction;
-    } catch (settleErr) {
-      // Log but don't fail — the signed authorization is still valid
-      console.error("Settlement failed (will retry later):", settleErr);
+    if (isLocalDevChain(chainId)) {
+      // Local dev: generate a fake tx hash for record-keeping
+      settlementTxHash = `0x${"0".repeat(63)}1`;
+      console.log("[dev] Skipping x402 facilitator settle for local chain");
+    } else {
+      try {
+        settlementResponse = await settleWithFacilitator(paymentPayload, paymentRequirement);
+        settlementTxHash = settlementResponse.transaction;
+      } catch (settleErr) {
+        // Log but don't fail — the signed authorization is still valid
+        console.error("Settlement failed (will retry later):", settleErr);
+      }
     }
 
     const costFields = {

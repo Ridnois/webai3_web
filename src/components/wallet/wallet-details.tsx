@@ -1,7 +1,6 @@
 "use client";
 
 import { useDisconnect, useSwitchChain, useAccount } from "wagmi";
-import { base } from "viem/chains";
 import { ChevronDown, Wallet, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +11,7 @@ import {
 } from "@/components/ui/popover";
 import { useWalletBalances } from "@/hooks/use-wallet-balances";
 import { getUsdcConfig } from "@/lib/contracts";
+import { defaultChain } from "@/lib/wagmi";
 
 export function WalletDetails() {
   const { address, chain } = useAccount();
@@ -50,9 +50,9 @@ export function WalletDetails() {
               <Button
                 variant="link"
                 size="xs"
-                onClick={() => switchChain({ chainId: base.id })}
+                onClick={() => switchChain({ chainId: defaultChain.id })}
               >
-                Switch to Base
+                Switch to {defaultChain.name}
               </Button>
             </div>
           )}
