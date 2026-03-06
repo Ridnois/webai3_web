@@ -9,7 +9,7 @@ const {
   mockRun,
   mockReturning,
   mockUploadMediaToR2,
-  mockGetPresignedUrls,
+  mockGetPublicUrls,
   mockVerifyWithFacilitator,
   mockSettleWithFacilitator,
 } = vi.hoisted(() => ({
@@ -18,7 +18,7 @@ const {
   mockRun: vi.fn(),
   mockReturning: vi.fn(),
   mockUploadMediaToR2: vi.fn(),
-  mockGetPresignedUrls: vi.fn(),
+  mockGetPublicUrls: vi.fn(),
   mockVerifyWithFacilitator: vi.fn(),
   mockSettleWithFacilitator: vi.fn(),
 }));
@@ -51,7 +51,7 @@ vi.mock("@/lib/db", () => ({
 
 vi.mock("@/lib/r2", () => ({
   uploadMediaToR2: mockUploadMediaToR2,
-  getPresignedUrls: mockGetPresignedUrls,
+  getPublicUrls: mockGetPublicUrls,
 }));
 
 vi.mock("@/lib/server-env", () => ({
@@ -330,7 +330,7 @@ describe("POST /api/inference", () => {
       mockUploadMediaToR2.mockResolvedValue(
         "0xdeadbeef/image-inference-id/0.png"
       );
-      mockGetPresignedUrls.mockResolvedValue([PRESIGNED_URL]);
+      mockGetPublicUrls.mockReturnValue([PRESIGNED_URL]);
     });
 
     it("returns 200 with the presigned URL", async () => {

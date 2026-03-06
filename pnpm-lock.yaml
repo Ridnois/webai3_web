@@ -11,9 +11,6 @@ importers:
       '@aws-sdk/client-s3':
         specifier: ^3.997.0
         version: 3.997.0
-      '@aws-sdk/s3-request-presigner':
-        specifier: ^3.997.0
-        version: 3.997.0
       '@tanstack/react-query':
         specifier: ^5.90.21
         version: 5.90.21(react@19.2.3)
@@ -265,10 +262,6 @@ packages:
     resolution: {integrity: sha512-3GrJYv5eI65oCKveBZP7Q246dVP+tqeys9aKMB0dfX1glUWfppWlxIu52derqdNb9BX9lxYmeiaBcBIqOAYSgQ==}
     engines: {node: '>=20.0.0'}
 
-  '@aws-sdk/s3-request-presigner@3.997.0':
-    resolution: {integrity: sha512-C5tV0o3OATA9lBnTYIBgKonj6gTIo1KSbmUu/FFgVN8mZvTMbJqdXqf/c83EDAFHNED+0I5zcjl9GkSGZTz7Sg==}
-    engines: {node: '>=20.0.0'}
-
   '@aws-sdk/signature-v4-multi-region@3.996.1':
     resolution: {integrity: sha512-Mj4npuEtVHFjGZHTBwhBvBzmgKHY7UsfroZWWzjpVP5YJaMTPeihsotuQLba5uQthEZyaeWs6dTu3Shr0qKFFw==}
     engines: {node: '>=20.0.0'}
@@ -287,10 +280,6 @@ packages:
 
   '@aws-sdk/util-endpoints@3.996.1':
     resolution: {integrity: sha512-7cJyd+M5i0IoqWkJa1KFx8KNCGIx+Ywu+lT53KpqX7ReVwz03DCKUqvZ/y65vdKwo9w9/HptSAeLDluO5MpGIg==}
-    engines: {node: '>=20.0.0'}
-
-  '@aws-sdk/util-format-url@3.972.4':
-    resolution: {integrity: sha512-rPm9g4WvgTz4ko5kqseIG5Vp5LUAbWBBDalm4ogHLMc0i20ChwQWqwuTUPJSu8zXn43jIM0xO2KZaYQsFJb+ew==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/util-locate-window@3.965.4':
@@ -7551,17 +7540,6 @@ snapshots:
       '@smithy/types': 4.13.0
       tslib: 2.8.1
 
-  '@aws-sdk/s3-request-presigner@3.997.0':
-    dependencies:
-      '@aws-sdk/signature-v4-multi-region': 3.996.1
-      '@aws-sdk/types': 3.973.2
-      '@aws-sdk/util-format-url': 3.972.4
-      '@smithy/middleware-endpoint': 4.4.20
-      '@smithy/protocol-http': 5.3.10
-      '@smithy/smithy-client': 4.12.0
-      '@smithy/types': 4.13.0
-      tslib: 2.8.1
-
   '@aws-sdk/signature-v4-multi-region@3.996.1':
     dependencies:
       '@aws-sdk/middleware-sdk-s3': 3.972.13
@@ -7598,13 +7576,6 @@ snapshots:
       '@smithy/types': 4.13.0
       '@smithy/url-parser': 4.2.10
       '@smithy/util-endpoints': 3.3.1
-      tslib: 2.8.1
-
-  '@aws-sdk/util-format-url@3.972.4':
-    dependencies:
-      '@aws-sdk/types': 3.973.2
-      '@smithy/querystring-builder': 4.2.10
-      '@smithy/types': 4.13.0
       tslib: 2.8.1
 
   '@aws-sdk/util-locate-window@3.965.4':

@@ -17,7 +17,6 @@ export interface InferenceDetail {
   predictTimeMs: number | null;
   createdAt: string;
   mediaUrls: string[] | null;
-  mediaError: string | null;
 }
 
 async function fetchInferenceDetail(id: string): Promise<InferenceDetail> {

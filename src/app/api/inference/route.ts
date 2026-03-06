@@ -5,7 +5,7 @@ import { requireAuth } from "@/lib/auth";
 import { getSession } from "@/lib/session";
 import { getDb } from "@/lib/db";
 import { inferences } from "@/lib/db/schema";
-import { uploadMediaToR2, getPresignedUrls } from "@/lib/r2";
+import { uploadMediaToR2, getPublicUrls } from "@/lib/r2";
 import {
   normalizeOutput,
   extractMediaUrls,
@@ -239,8 +239,8 @@ export async function POST(request: NextRequest) {
           .set({ r2Keys, status: "succeeded" })
           .where(eq(inferences.id, record.id));
 
-        const presignedUrls = await getPresignedUrls(r2Keys);
-        responseOutput = presignedUrls.length === 1 ? presignedUrls[0] : presignedUrls;
+        const publicUrls = getPublicUrls(r2Keys);
+        responseOutput = publicUrls.length === 1 ? publicUrls[0] : publicUrls;
 
         const responseBody = JSON.stringify({
           id: record.id,

@@ -119,11 +119,6 @@ export default function InferenceDetailPage() {
 
             {data.status === "succeeded" && (
               <>
-                {data.mediaError && (
-                  <div className="mb-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-                    Media is stored, but URLs could not be generated right now: {data.mediaError}
-                  </div>
-                )}
                 {data.outputType === "text" && <TextResult output={output} />}
                 {data.outputType === "image" && <ImageResult output={output} />}
                 {data.outputType === "audio" && <AudioResult output={output} />}

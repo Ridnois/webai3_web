@@ -3,7 +3,7 @@ import { requireAuth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { inferences } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
-import { getPresignedUrls } from "@/lib/r2";
+import { getPublicUrls } from "@/lib/r2";
 
 export async function GET(
   _request: NextRequest,
@@ -52,24 +52,17 @@ export async function GET(
     }
 
     let mediaUrls: string[] | null = null;
-    let mediaError: string | null = null;
     const r2Keys = Array.isArray(row.r2Keys)
       ? row.r2Keys.filter((key): key is string => typeof key === "string" && key.length > 0)
       : [];
 
     if (r2Keys.length > 0) {
-      try {
-        mediaUrls = await getPresignedUrls(r2Keys);
-      } catch (err) {
-        mediaError = err instanceof Error ? err.message : "Failed to sign media URLs";
-        console.error("[api/inferences/:id] Failed to generate media URLs:", mediaError);
-      }
+      mediaUrls = getPublicUrls(r2Keys);
     }
 
     return NextResponse.json({
       ...row,
       mediaUrls,
-      mediaError,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown server error";

@@ -1,9 +1,7 @@
 import {
   S3Client,
   PutObjectCommand,
-  GetObjectCommand,
 } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { getServerEnv } from "./server-env";
 
 let s3Client: S3Client | null = null;
@@ -67,18 +65,12 @@ export async function uploadMediaToR2(
   return key;
 }
 
-export async function getPresignedUrl(
-  key: string,
-  expiresIn = 3600
-): Promise<string> {
-  const client = getR2Client();
-  const command = new GetObjectCommand({
-    Bucket: getBucket(),
-    Key: key,
-  });
-  return getSignedUrl(client, command, { expiresIn });
+export function getPublicUrl(key: string): string {
+  const env = getServerEnv();
+  const base = env.R2_PUBLIC_URL.replace(/\/+$/, "");
+  return `${base}/${key}`;
 }
 
-export async function getPresignedUrls(keys: string[]): Promise<string[]> {
-  return Promise.all(keys.map((key) => getPresignedUrl(key)));
+export function getPublicUrls(keys: string[]): string[] {
+  return keys.map((key) => getPublicUrl(key));
 }
