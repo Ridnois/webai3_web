@@ -242,7 +242,7 @@ describe("POST /api/inference", () => {
     });
   });
 
-  // ── Phase 2: verify → run → settle → 200 ──────────────────────────────────
+  // ── Phase 2: verify → settle → run → 200 ──────────────────────────────────
 
   describe("Phase 2 — with Payment-Signature header", () => {
     beforeEach(() => {
@@ -298,6 +298,22 @@ describe("POST /api/inference", () => {
 
       const body = await res.json();
       expect(body.code).toBe("PAYMENT_INVALID");
+    });
+
+    it("returns 402 when settlement fails and does not run inference", async () => {
+      mockSettleWithFacilitator.mockRejectedValue(
+        new Error("Facilitator /settle failed (500): internal error")
+      );
+
+      const res = await POST(makeRequest(VALID_BODY, VALID_PAYMENT_SIGNATURE_HEADER));
+      expect(res.status).toBe(402);
+
+      const body = await res.json();
+      expect(body.code).toBe("SETTLEMENT_FAILED");
+      expect(body.error).toContain("Facilitator /settle failed");
+
+      // Inference should never have been called
+      expect(mockRun).not.toHaveBeenCalled();
     });
   });
 

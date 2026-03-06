@@ -140,11 +140,30 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Run inference
+  // Settle payment before running inference
   const db = getDb();
   const outputType = outputTypeForTask(task);
   const estimatedCost = estimated.toString();
 
+  let settlementTxHash: string | undefined;
+  let settlementResponse;
+  if (isLocalDevChain(chainId)) {
+    settlementTxHash = `0x${crypto.randomUUID().replace(/-/g, "")}${crypto.randomUUID().replace(/-/g, "")}`;
+    console.log("[dev] Skipping x402 facilitator settle for local chain");
+  } else {
+    try {
+      settlementResponse = await settleWithFacilitator(paymentPayload, paymentRequirement);
+      settlementTxHash = settlementResponse.transaction;
+    } catch (settleErr) {
+      const settleMessage = settleErr instanceof Error ? settleErr.message : "Settlement failed";
+      return NextResponse.json(
+        { error: settleMessage, code: "SETTLEMENT_FAILED" },
+        { status: 402 }
+      );
+    }
+  }
+
+  // Run inference (payment already settled)
   try {
     const replicate = getReplicateClient();
     const identifier = model as `${string}/${string}`;
@@ -155,23 +174,6 @@ export async function POST(request: NextRequest) {
     const output = normalizeOutput(rawOutput);
     const actualCost = actualCostUsdc(predictTimeMs, ratePerSec);
     const actualCostStr = actualCost.toString();
-
-    // Settle with facilitator (skip on local dev chain)
-    let settlementTxHash: string | undefined;
-    let settlementResponse;
-    if (isLocalDevChain(chainId)) {
-      // Local dev: generate a fake tx hash for record-keeping
-      settlementTxHash = `0x${"0".repeat(63)}1`;
-      console.log("[dev] Skipping x402 facilitator settle for local chain");
-    } else {
-      try {
-        settlementResponse = await settleWithFacilitator(paymentPayload, paymentRequirement);
-        settlementTxHash = settlementResponse.transaction;
-      } catch (settleErr) {
-        // Log but don't fail — the signed authorization is still valid
-        console.error("Settlement failed (will retry later):", settleErr);
-      }
-    }
 
     const costFields = {
       estimatedCostUsdc: estimatedCost,
@@ -294,8 +296,17 @@ export async function POST(request: NextRequest) {
     return new NextResponse(responseBody, { status: 200, headers });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
+    const isModelNotFound =
+      message.includes("404") &&
+      (message.includes("could not be found") || message.includes("Not Found"));
 
-    // Best-effort: persist the failure
+    const errorCode = isModelNotFound ? "MODEL_NOT_FOUND" : "INFERENCE_ERROR";
+    const errorMessage = isModelNotFound
+      ? `Model "${model}" is no longer available on Replicate. Please select a different model.`
+      : message;
+    const httpStatus = isModelNotFound ? 404 : 502;
+
+    // Best-effort: persist the failure (payment was already settled)
     try {
       await db.insert(inferences).values({
         userAddress: auth.address,
@@ -304,8 +315,9 @@ export async function POST(request: NextRequest) {
         input,
         outputType,
         status: "failed",
-        errorMessage: message,
+        errorMessage: errorMessage,
         estimatedCostUsdc: estimatedCost,
+        paymentTxHash: settlementTxHash ?? null,
         paymentChainId: chainId,
       });
     } catch {
@@ -313,8 +325,8 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: message, code: "INFERENCE_ERROR" },
-      { status: 502 }
+      { error: errorMessage, code: errorCode },
+      { status: httpStatus }
     );
   }
 }
