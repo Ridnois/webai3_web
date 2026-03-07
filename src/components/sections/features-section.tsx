@@ -5,6 +5,8 @@ import {
   ShieldCheck,
   Globe,
   Zap,
+  Share2,
+  Sparkles,
 } from "lucide-react";
 import { SectionHeading } from "@/components/section-heading";
 import { FeatureCard } from "@/components/feature-card";
@@ -12,39 +14,51 @@ import { FeatureCard } from "@/components/feature-card";
 const features = [
   {
     icon: Coins,
-    title: "Micropayments",
+    title: "True Pay-Per-Use",
     description:
-      "Pay fractions of a cent per request. No minimums, no monthly fees, no wasted credits.",
+      "No subscriptions, no credits, no minimums. You pay the exact cost of your inference in USDC — fractions of a cent per request.",
   },
   {
     icon: KeyRound,
-    title: "No API Keys",
+    title: "Wallet is Your Identity",
     description:
-      "Your wallet is your identity. No sign-ups, no dashboards, no rate-limit emails.",
+      "No sign-ups, no API keys to manage. Connect your Web3 wallet and you're in. Sign-In With Ethereum keeps it simple.",
   },
   {
     icon: Layers,
-    title: "Multi-Model",
+    title: "Multi-Model Access",
     description:
-      "Access GPT, Claude, and open-source models through a single unified API.",
+      "Flux, Stable Diffusion, Llama, Mixtral, Stable Audio, and more. One interface to access the best open-source AI models.",
   },
   {
     icon: ShieldCheck,
-    title: "On-Chain Verification",
+    title: "On-Chain Settlement",
     description:
-      "Every payment is recorded on-chain. Fully transparent and auditable by anyone.",
+      "Every payment is verified and settled on Base before your inference runs. Transparent, auditable, and trustless via x402.",
+  },
+  {
+    icon: Share2,
+    title: "Share & Discover",
+    description:
+      "Share your creations to the public gallery with one click. Browse what others have made and get inspired by the community.",
+  },
+  {
+    icon: Sparkles,
+    title: "Ready-Made Templates",
+    description:
+      "Don't know where to start? Pick from curated prompt templates across image, text, and audio — one click to get started.",
   },
   {
     icon: Globe,
     title: "Open Standard",
     description:
-      "Built on the x402 protocol — no vendor lock-in, works with any compliant provider.",
+      "Built on x402 — the open payment protocol for the internet. No vendor lock-in, no walled gardens.",
   },
   {
     icon: Zap,
-    title: "Base L2",
+    title: "Built on Base",
     description:
-      "Transactions settle on Base for sub-cent gas fees and near-instant finality.",
+      "Sub-cent gas fees, near-instant finality, and Coinbase ecosystem. The fastest path from USDC to AI output.",
   },
 ];
 
@@ -53,10 +67,10 @@ export function FeaturesSection() {
     <section id="features" className="bg-muted/40 py-24 sm:py-32">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <SectionHeading
-          title="Why web3-ai?"
+          title="Everything you need, nothing you don't"
           subtitle="AI inference should be open, affordable, and verifiable."
         />
-        <div className="mt-16 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-16 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {features.map((feature, i) => (
             <FeatureCard
               key={i}

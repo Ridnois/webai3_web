@@ -46,11 +46,11 @@ function useCountUp(target: number, duration = 2000) {
 
 function formatDuration(ms: number): { value: number; unit: string } {
   const seconds = Math.floor(ms / 1000);
-  if (seconds < 60) return { value: seconds, unit: "seconds" };
+  if (seconds < 60) return { value: seconds, unit: "sec" };
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return { value: minutes, unit: "minutes" };
+  if (minutes < 60) return { value: minutes, unit: "min" };
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return { value: hours, unit: "hours" };
+  if (hours < 24) return { value: hours, unit: "hrs" };
   const days = Math.floor(hours / 24);
   return { value: days, unit: "days" };
 }
@@ -96,8 +96,16 @@ export function StatsSection() {
   const duration = data ? formatDuration(data.totalTimeMs) : null;
 
   return (
-    <section className="py-24 sm:py-32">
+    <section className="bg-primary text-primary-foreground py-24 sm:py-32">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl text-center mb-16">
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            Trusted by builders
+          </h2>
+          <p className="mt-4 text-lg text-primary-foreground/70">
+            Real usage, real payments, real results.
+          </p>
+        </div>
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-3">
           {isLoading || !data || !duration ? (
             <>
@@ -109,16 +117,16 @@ export function StatsSection() {
             <>
               <AnimatedStat
                 target={data.totalInferences}
-                label="Total Inferences"
+                label="Inferences Run"
               />
               <AnimatedStat
                 target={duration.value}
                 suffix={duration.unit}
-                label="Total Inference Time"
+                label="Compute Time"
               />
               <AnimatedStat
                 target={data.totalUsers}
-                label="Unique Users"
+                label="Unique Wallets"
               />
             </>
           )}

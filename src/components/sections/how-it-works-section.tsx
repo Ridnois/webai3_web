@@ -1,21 +1,42 @@
 import { SectionHeading } from "@/components/section-heading";
-import { StepCard } from "@/components/step-card";
+import {
+  Wallet,
+  MousePointerClick,
+  DollarSign,
+  Sparkles,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
-const steps = [
+interface Step {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+}
+
+const steps: Step[] = [
   {
+    icon: Wallet,
     title: "Connect Wallet",
     description:
-      "Link your Web3 wallet in one click. No sign-ups, no accounts — your wallet is your identity.",
+      "Sign in with your Ethereum wallet. No accounts, no passwords, no sign-up forms.",
   },
   {
-    title: "Choose a Model",
+    icon: MousePointerClick,
+    title: "Pick a Model & Prompt",
     description:
-      "Pick the AI model that fits your task — GPT, Claude, open-source models, and more.",
+      "Choose from top AI models on Replicate. Use a template or write your own prompt.",
   },
   {
-    title: "Pay & Receive",
+    icon: DollarSign,
+    title: "Sign a USDC Payment",
     description:
-      "A USDC micropayment settles instantly on Base L2. Get your inference result in the same response.",
+      "Approve a micropayment in your wallet. No gas fees to worry about on Base L2.",
+  },
+  {
+    icon: Sparkles,
+    title: "Get Your Result",
+    description:
+      "Payment settles on-chain, your AI result arrives instantly. Share it or keep it private.",
   },
 ];
 
@@ -25,17 +46,32 @@ export function HowItWorksSection() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <SectionHeading
           title="How it Works"
-          subtitle="Three simple steps from wallet to AI results."
+          subtitle="From wallet to AI result in four steps."
         />
-        <div className="mt-16 grid grid-cols-1 gap-12 sm:grid-cols-3">
-          {steps.map((step, i) => (
-            <StepCard
-              key={i}
-              step={i + 1}
-              title={step.title}
-              description={step.description}
-            />
-          ))}
+        <div className="mt-16 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          {steps.map((step, i) => {
+            const Icon = step.icon;
+            return (
+              <div key={i} className="relative flex flex-col items-center text-center">
+                {/* Connector line (hidden on first item and mobile) */}
+                {i > 0 && (
+                  <div className="pointer-events-none absolute -left-4 top-7 hidden h-px w-8 bg-border lg:block" />
+                )}
+                <div className="relative mb-5">
+                  <div className="flex size-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
+                    <Icon className="size-6" />
+                  </div>
+                  <span className="absolute -bottom-1 -right-1 flex size-6 items-center justify-center rounded-full bg-background text-xs font-bold border">
+                    {i + 1}
+                  </span>
+                </div>
+                <h3 className="mb-2 text-lg font-semibold">{step.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {step.description}
+                </p>
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>
