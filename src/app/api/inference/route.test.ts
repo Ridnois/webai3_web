@@ -310,7 +310,7 @@ describe("POST /api/inference", () => {
 
       const body = await res.json();
       expect(body.code).toBe("SETTLEMENT_FAILED");
-      expect(body.error).toContain("Facilitator /settle failed");
+      expect(body.error).toBe("Payment settlement failed. Please try again.");
 
       // Inference should never have been called
       expect(mockRun).not.toHaveBeenCalled();
@@ -377,7 +377,7 @@ describe("POST /api/inference", () => {
     it("returns the error message and INFERENCE_ERROR code", async () => {
       const res = await POST(makeRequest(VALID_BODY, VALID_PAYMENT_SIGNATURE_HEADER));
       const body = await res.json();
-      expect(body.error).toBe("Model prediction failed");
+      expect(body.error).toBe("Inference failed. Please try again later.");
       expect(body.code).toBe("INFERENCE_ERROR");
     });
   });

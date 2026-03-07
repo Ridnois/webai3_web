@@ -2,6 +2,7 @@ import { z } from "zod";
 import { base, baseSepolia, foundry } from "viem/chains";
 import { getUsdcConfig } from "./contracts";
 import { getServerEnv } from "./server-env";
+import { fetchWithTimeout } from "./fetch-with-timeout";
 
 // ─── CAIP-2 network mapping ────────────────────────────────────────────────
 
@@ -127,7 +128,7 @@ export async function verifyWithFacilitator(
   paymentRequirement: PaymentRequirement
 ): Promise<VerifyResponse> {
   const env = getServerEnv();
-  const res = await fetch(`${env.X402_FACILITATOR_URL}/verify`, {
+  const res = await fetchWithTimeout(`${env.X402_FACILITATOR_URL}/verify`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -135,6 +136,7 @@ export async function verifyWithFacilitator(
       paymentPayload,
       paymentRequirements: paymentRequirement,
     }),
+    timeoutMs: 15_000,
   });
 
   if (!res.ok) {
@@ -150,7 +152,7 @@ export async function settleWithFacilitator(
   paymentRequirement: PaymentRequirement
 ): Promise<SettlementResponse> {
   const env = getServerEnv();
-  const res = await fetch(`${env.X402_FACILITATOR_URL}/settle`, {
+  const res = await fetchWithTimeout(`${env.X402_FACILITATOR_URL}/settle`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -158,6 +160,7 @@ export async function settleWithFacilitator(
       paymentPayload,
       paymentRequirements: paymentRequirement,
     }),
+    timeoutMs: 30_000,
   });
 
   if (!res.ok) {

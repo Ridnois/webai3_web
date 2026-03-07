@@ -154,9 +154,10 @@ export async function POST(request: NextRequest) {
       settlementResponse = await settleWithFacilitator(paymentPayload, paymentRequirement);
       settlementTxHash = settlementResponse.transaction;
     } catch (settleErr) {
-      const settleMessage = settleErr instanceof Error ? settleErr.message : "Settlement failed";
+      const settleRaw = settleErr instanceof Error ? settleErr.message : "Settlement failed";
+      console.error("[api/inference] Settlement error:", settleRaw);
       return NextResponse.json(
-        { error: settleMessage, code: "SETTLEMENT_FAILED" },
+        { error: "Payment settlement failed. Please try again.", code: "SETTLEMENT_FAILED" },
         { status: 402 }
       );
     }
@@ -218,17 +219,18 @@ export async function POST(request: NextRequest) {
             )
           );
         } catch (uploadErr) {
-          const uploadMessage = uploadErr instanceof Error ? uploadErr.message : "Unknown upload error";
+          const uploadRaw = uploadErr instanceof Error ? uploadErr.message : "Unknown upload error";
+          console.error("[api/inference] Upload error:", uploadRaw);
           try {
             await db
               .update(inferences)
-              .set({ status: "failed", errorMessage: uploadMessage })
+              .set({ status: "failed", errorMessage: uploadRaw })
               .where(eq(inferences.id, record.id));
           } catch {
             // DB update failed — don't mask the original error
           }
           return NextResponse.json(
-            { error: uploadMessage, code: "INFERENCE_ERROR" },
+            { error: "Failed to process media output. Please try again.", code: "INFERENCE_ERROR" },
             { status: 502 }
           );
         }
@@ -294,15 +296,17 @@ export async function POST(request: NextRequest) {
 
     return new NextResponse(responseBody, { status: 200, headers });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
+    const rawMessage = err instanceof Error ? err.message : "Unknown error";
     const isModelNotFound =
-      message.includes("404") &&
-      (message.includes("could not be found") || message.includes("Not Found"));
+      rawMessage.includes("404") &&
+      (rawMessage.includes("could not be found") || rawMessage.includes("Not Found"));
 
     const errorCode = isModelNotFound ? "MODEL_NOT_FOUND" : "INFERENCE_ERROR";
     const errorMessage = isModelNotFound
       ? `Model "${model}" is no longer available on Replicate. Please select a different model.`
-      : message;
+      : "Inference failed. Please try again later.";
+
+    console.error("[api/inference] Inference error:", rawMessage);
     const httpStatus = isModelNotFound ? 404 : 502;
 
     // Best-effort: persist the failure (payment was already settled)
@@ -314,7 +318,7 @@ export async function POST(request: NextRequest) {
         input,
         outputType,
         status: "failed",
-        errorMessage: errorMessage,
+        errorMessage: rawMessage,
         estimatedCostUsdc: estimatedCost,
         paymentTxHash: settlementTxHash ?? null,
         paymentChainId: chainId,

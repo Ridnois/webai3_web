@@ -66,10 +66,10 @@ export async function GET(
       mediaUrls,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown server error";
-    console.error("[api/inferences/:id] Unexpected error:", message);
+    const raw = err instanceof Error ? err.message : "Unknown server error";
+    console.error("[api/inferences/:id] Unexpected error:", raw);
     return NextResponse.json(
-      { error: message, code: "DETAIL_FETCH_FAILED" },
+      { error: "An internal error occurred. Please try again later.", code: "DETAIL_FETCH_FAILED" },
       { status: 500 }
     );
   }

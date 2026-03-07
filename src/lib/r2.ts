@@ -3,6 +3,13 @@ import {
   PutObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getServerEnv } from "./server-env";
+import { fetchWithTimeout } from "./fetch-with-timeout";
+
+const ALLOWED_MEDIA_HOSTS = [
+  "replicate.delivery",
+  "replicate.com",
+  "pbxt.replicate.delivery",
+];
 
 let s3Client: S3Client | null = null;
 
@@ -42,9 +49,20 @@ export async function uploadMediaToR2(
   inferenceId: string,
   index: number
 ): Promise<string> {
-  const res = await fetch(sourceUrl);
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(sourceUrl);
+  } catch {
+    throw new Error("Invalid media source URL");
+  }
+
+  if (!ALLOWED_MEDIA_HOSTS.some((h) => parsedUrl.hostname.endsWith(h))) {
+    throw new Error(`Untrusted media host: ${parsedUrl.hostname}`);
+  }
+
+  const res = await fetchWithTimeout(sourceUrl, { timeoutMs: 60_000 });
   if (!res.ok) {
-    throw new Error(`Failed to fetch media from ${sourceUrl}: ${res.status}`);
+    throw new Error(`Failed to fetch media: ${res.status}`);
   }
 
   const buffer = Buffer.from(await res.arrayBuffer());

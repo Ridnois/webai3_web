@@ -18,7 +18,13 @@ export const replicateModelSchema = z.object({
 export type ReplicateModel = z.infer<typeof replicateModelSchema>;
 
 export const inferenceRequestSchema = z.object({
-  model: z.string().min(1, "Model is required"),
+  model: z
+    .string()
+    .min(1, "Model is required")
+    .regex(
+      /^[a-z0-9_-]+\/[a-z0-9._-]+(:[a-z0-9]+)?$/i,
+      "Model must be in owner/name or owner/name:version format"
+    ),
   task: taskTypeSchema,
   input: z.record(z.unknown()),
 });

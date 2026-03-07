@@ -68,13 +68,8 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const raw = err instanceof Error ? err.message : String(err);
     console.error("[auth/verify] DB upsert failed:", raw);
-    const detail = raw.includes("does not exist")
-      ? "Database table missing — run `pnpm db:push` to create tables."
-      : raw.includes("connect")
-        ? "Cannot connect to the database. Check DATABASE_URL."
-        : `Database error: ${raw}`;
     return NextResponse.json(
-      { error: detail, code: "DB_ERROR" },
+      { error: "An internal error occurred. Please try again later.", code: "DB_ERROR" },
       { status: 500 }
     );
   }
