@@ -43,13 +43,16 @@ function inferHint(
   code: string | null,
   message: string
 ): string | null {
-  const lower = message.toLowerCase();
-
   if (status === 401) {
     return "Your wallet session may have expired. Sign in again and retry.";
   }
 
+  if (code === "MODEL_NOT_FOUND" || (status === 404 && message.toLowerCase().includes("model"))) {
+    return "This model has been removed or renamed on Replicate. Choose a different model and try again.";
+  }
+
   if (status === 402 && code === "PAYMENT_INVALID") {
+    const lower = message.toLowerCase();
     if (
       lower.includes("insufficient") ||
       lower.includes("balance") ||

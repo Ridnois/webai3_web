@@ -1,6 +1,6 @@
 # CLAUDE.md — webai3_web
 
-Web3-enabled AI inference platform. Users authenticate via wallet (SIWE), then pay-per-use to run AI models (text-to-image, text-to-text, text-to-sound) through the Replicate API. Results are stored in Cloudflare R2 and indexed in PostgreSQL.
+Web3-enabled AI inference platform. Users authenticate via wallet (SIWE), then pay-per-use to run AI models (text-to-image, text-to-text, text-to-sound) through the Replicate API. Payment is settled on-chain via x402 USDC before inference runs. Media outputs are stored permanently on Cloudflare R2 and indexed in PostgreSQL.
 
 ---
 
@@ -11,10 +11,11 @@ Web3-enabled AI inference platform. Users authenticate via wallet (SIWE), then p
 | Framework | Next.js 16 (App Router, React 19) |
 | Styling | Tailwind CSS v4 + shadcn/ui (New York) |
 | Web3 | Wagmi v2 + viem + SIWE (EIP-4361) |
+| Payments | x402 protocol (EIP-3009 transferWithAuthorization) |
 | Server State | TanStack React Query v5 |
 | Database | PostgreSQL + Drizzle ORM |
 | AI Models | Replicate API |
-| Storage | Cloudflare R2 (S3-compatible) |
+| Storage | Cloudflare R2 (S3-compatible, public bucket) |
 | Auth | iron-session (encrypted HTTP-only cookies) |
 | Validation | Zod (runtime + type inference) |
 | Testing | Vitest + Testing Library + jsdom |
@@ -30,27 +31,44 @@ src/
 │   ├── page.tsx            # Landing page (Server Component)
 │   ├── api/                # Route Handlers (server-only)
 │   │   ├── auth/           # nonce, verify, session, logout
-│   │   ├── inference/      # POST — run a model
-│   │   ├── inferences/     # GET list + GET [id]
-│   │   └── models/         # GET available models from Replicate
+│   │   ├── inference/      # POST — run a model (x402 payment)
+│   │   ├── inferences/     # GET list, GET/PATCH [id]
+│   │   ├── models/         # GET available models from Replicate
+│   │   ├── gallery/        # GET public gallery (paginated)
+│   │   ├── r/[id]/         # GET public permalink
+│   │   ├── stats/          # GET platform stats
+│   │   ├── user/stats/     # GET per-user stats
+│   │   └── admin/metrics/  # GET admin metrics
 │   ├── inference/          # Inference UI pages
 │   │   ├── page.tsx        # Task selector
 │   │   ├── text-to-image/
 │   │   ├── text-to-text/
 │   │   └── text-to-sound/
-│   └── history/            # User history pages
+│   ├── gallery/            # Public gallery browser
+│   ├── templates/          # Prompt templates browser
+│   ├── r/[id]/             # Public permalink page (OG metadata)
+│   ├── dashboard/          # User dashboard
+│   ├── admin/              # Admin dashboard
+│   └── history/            # User history pages + [id] detail
 ├── components/
 │   ├── ui/                 # shadcn/ui primitives (do not edit manually)
-│   ├── layout/             # site-header, site-footer
+│   ├── layout/             # site-header (with mobile menu), site-footer
 │   ├── auth/               # sign-in-button
 │   ├── wallet/             # wallet-button, wallet-details, connect-dialog
 │   ├── inference/          # inference-form, result, loading, model-selector
-│   ├── history/            # inference-history
-│   └── sections/           # Landing page sections
+│   ├── gallery/            # gallery-grid, public-result-view
+│   ├── templates/          # template-grid
+│   ├── history/            # inference-history, inference-history-card
+│   └── sections/           # Landing page: hero, showcase, how-it-works,
+│                           # features, pricing, templates, cta
 ├── hooks/                  # Custom React hooks (data + side-effects only)
 ├── lib/                    # Pure utilities, SDK clients, config
 │   ├── db/                 # Drizzle instance + schema
-│   ├── wagmi.ts            # Wagmi config (Base + Base Sepolia)
+│   ├── x402.ts             # x402 payment protocol helpers
+│   ├── pricing.ts          # Cost estimation + USDC conversion
+│   ├── templates.ts        # 16 curated prompt template definitions
+│   ├── r2.ts               # R2 upload + public URL helpers
+│   ├── wagmi.ts            # Wagmi config (Base + Base Sepolia + Anvil)
 │   ├── contracts.ts        # USDC contract addresses/ABIs
 │   ├── session.ts          # iron-session config
 │   ├── env.ts              # Client env validation (Zod)
@@ -69,14 +87,20 @@ src/
 - Never import server-only modules (db, replicate, iron-session, AWS SDK) into Client Components.
 - Never import client-only modules (wagmi hooks, window, localStorage) into Server Components or Route Handlers.
 - If a page needs both: keep the server shell as a Server Component and extract the interactive part into a `"use client"` child.
+- Pages using `useSearchParams()` must wrap the client component in `<Suspense>`.
 
 ```tsx
 // GOOD — server page delegates interactive section to a client child
 // app/inference/text-to-image/page.tsx (Server Component)
-import { InferenceForm } from "@/components/inference/inference-form"; // "use client"
+import { Suspense } from "react";
+import { InferencePageLayout } from "@/components/inference/inference-page-layout"; // "use client"
 
 export default function Page() {
-  return <InferenceForm task="text-to-image" />;
+  return (
+    <Suspense>
+      <InferencePageLayout task="text-to-image" />
+    </Suspense>
+  );
 }
 ```
 
@@ -111,6 +135,7 @@ Hooks fetch or mutate data — they do not render UI.
 - Wrap React Query `useQuery` / `useMutation` and expose typed return values.
 - Never put JSX inside a hook.
 - Hooks that require auth should gracefully handle unauthenticated state (return `null` data, not throw).
+- All hooks must be called before any early returns (React rules of hooks).
 
 ### 4. Library Utilities (`src/lib/`)
 
@@ -119,6 +144,7 @@ Pure functions and SDK singleton instances. No React, no hooks.
 - `env.ts` — client-safe env vars (only `NEXT_PUBLIC_*`).
 - `server-env.ts` — server-only env vars. Import only in Route Handlers and server utilities.
 - `utils.ts` — `cn()` helper only. Do not add unrelated utilities here; create a dedicated file.
+- `templates.ts` — prompt template definitions. Exports `PROMPT_TEMPLATES`, `getTemplatesByTask()`, `getTemplateById()`, `getCategories()`.
 - SDK clients (replicate, db, r2) are singletons — do not instantiate them in components.
 
 ### 5. Types (`src/types/`)
@@ -174,6 +200,11 @@ Pure functions and SDK singleton instances. No React, no hooks.
 4. Never hand-edit migration files.
 5. Use `pnpm db:push` only in local development when you want to skip migration files.
 
+### Current Schema
+
+- **`users`** — `address` (PK), `created_at`, `last_seen_at`
+- **`inferences`** — `id` (UUID PK), `user_address` (FK), `task_type`, `model`, `input`, `output_type`, `output_data`, `r2_keys`, `status`, `error_message`, `predict_time_ms`, `estimated_cost_usdc`, `actual_cost_usdc`, `payment_tx_hash` (unique), `payment_chain_id`, `is_public` (0/1), `created_at`
+
 ### Query Patterns
 
 - All DB access is server-side only (Route Handlers or Server Actions).
@@ -201,6 +232,7 @@ POST /api/auth/logout  → destroy session
 
 - **Base Mainnet** (chainId: 8453)
 - **Base Sepolia** (chainId: 84532)
+- **Anvil** (chainId: 31337, local dev only — payment settlement is mocked)
 
 Do not add new networks without updating `src/lib/wagmi.ts` and `src/lib/contracts.ts`.
 
@@ -212,25 +244,33 @@ Do not add new networks without updating `src/lib/wagmi.ts` and `src/lib/contrac
 
 ---
 
-## Inference & Media Storage Pipeline
+## Inference & Payment Pipeline
 
 ```
-Client → POST /api/inference
+Client → POST /api/inference (no Payment-Signature header)
+         └─ Server returns 402 + Payment-Required header (estimated cost)
+
+Client → POST /api/inference (with Payment-Signature header)
          ├─ Auth check (iron-session)
          ├─ Zod validation
-         ├─ Replicate.run(model, input)
+         ├─ Decode + verify payment payload
+         ├─ Verify with x402 facilitator
+         ├─ Settle payment on-chain (USDC transfer)     ← BEFORE inference
+         ├─ Replicate.run(model, input)                  ← AFTER settlement
          ├─ If media output:
          │    ├─ Download from Replicate URL
          │    ├─ Upload to R2 at {address}/{inferenceId}/{n}.{ext}
-         │    └─ Generate presigned URL (1 hour TTL)
+         │    └─ Return permanent public URL
          ├─ If text output:
          │    └─ Store directly in DB (outputData jsonb)
          └─ INSERT into inferences table → return result
 ```
 
-- Presigned URLs expire in **1 hour** — do not cache them beyond that.
+- **Settlement happens before inference.** If settlement fails, no compute runs. If inference fails after settlement, the failure is recorded with the payment tx hash.
+- Media is served via permanent public R2 URLs — URLs never expire.
 - R2 key format: `{walletAddress}/{inferenceId}/{index}.{ext}` — keep this consistent for any new media types.
 - `predictTimeMs` tracks end-to-end Replicate execution time — always record it.
+- Cost is `$0.001 USDC per second` of compute by default (configurable via `INFERENCE_RATE_PER_SEC`).
 
 ---
 
@@ -240,6 +280,7 @@ Client → POST /api/inference
 ```
 NEXT_PUBLIC_BASE_RPC_URL
 NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL
+NEXT_PUBLIC_ENABLE_DEV_CHAIN
 ```
 Validated in `src/lib/env.ts`.
 
@@ -252,9 +293,13 @@ R2_ACCOUNT_ID
 R2_ACCESS_KEY_ID
 R2_SECRET_ACCESS_KEY
 R2_BUCKET_NAME
-R2_PUBLIC_URL           # (optional) public CDN URL
+R2_PUBLIC_URL           # required — public URL for the R2 bucket
+RECEIVER_ADDRESS        # Ethereum address receiving USDC payments
+INFERENCE_RATE_PER_SEC  # optional, default 0.001
+X402_FACILITATOR_URL    # optional, default testnet
+ADMIN_ADDRESSES         # optional, comma-separated admin wallets
 ```
-Validated in `src/lib/server-env.ts`. Startup will throw if any are missing.
+Validated in `src/lib/server-env.ts`. Startup will throw if any required vars are missing.
 
 ---
 
@@ -290,6 +335,7 @@ src/hooks/use-auth.test.ts   ← colocated
 - Mock `iron-session` to control auth state in Route Handler tests.
 - Mock Drizzle ORM calls with `vi.mock('@/lib/db')`.
 - Do not mock internal pure functions — test them directly.
+- `getPublicUrls` is synchronous — use `mockReturnValue`, not `mockResolvedValue`.
 
 **Test structure:**
 ```ts
@@ -311,7 +357,10 @@ pnpm lint             # ESLint check
 pnpm test             # run all tests
 pnpm db:generate      # generate DB migration from schema changes
 pnpm db:migrate       # apply pending migrations
+pnpm db:push          # push schema directly (dev only)
 pnpm db:studio        # open Drizzle Studio (DB browser)
+pnpm chain:start      # start local Anvil dev chain
+pnpm chain:fund       # fund test wallets with USDC
 pnpm dlx shadcn add <component>  # add a new shadcn/ui component
 ```
 
@@ -325,6 +374,8 @@ pnpm dlx shadcn add <component>  # add a new shadcn/ui component
 - Do not mutate shadcn/ui files in `src/components/ui/` by hand.
 - Do not write raw SQL strings — use Drizzle's query builder.
 - Do not skip Zod validation on any Route Handler input.
-- Do not cache presigned R2 URLs for more than 1 hour.
+- Do not use presigned URLs — media is served via permanent public R2 URLs.
+- Do not settle payment after inference — always settle first.
 - Do not add new `NEXT_PUBLIC_` vars without adding them to `src/lib/env.ts`.
 - Do not add new server env vars without adding them to `src/lib/server-env.ts`.
+- Do not call hooks after early returns — React rules of hooks must be followed.

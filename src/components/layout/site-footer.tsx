@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Logo } from "@/components/logo";
 import { Separator } from "@/components/ui/separator";
 
 export function SiteFooter() {
@@ -7,20 +8,19 @@ export function SiteFooter() {
   return (
     <footer className="border-t bg-muted/40">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 gap-8 md:grid-cols-3">
+        <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
+          {/* Brand */}
+          <div className="col-span-2 md:col-span-1">
+            <Logo />
+            <p className="mt-3 text-sm text-muted-foreground">
+              Pay-per-use AI inference powered by x402 and USDC on Base.
+            </p>
+          </div>
+
+          {/* Product */}
           <div>
             <h3 className="text-sm font-semibold">Product</h3>
             <ul className="mt-4 space-y-2">
-              <li>
-                <a href="/#how-it-works" className="text-sm text-muted-foreground hover:text-foreground">
-                  How it Works
-                </a>
-              </li>
-              <li>
-                <a href="/#pricing" className="text-sm text-muted-foreground hover:text-foreground">
-                  Pricing
-                </a>
-              </li>
               <li>
                 <Link href="/inference" className="text-sm text-muted-foreground hover:text-foreground">
                   Inference
@@ -31,16 +31,18 @@ export function SiteFooter() {
                   Templates
                 </Link>
               </li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold">Explore</h3>
-            <ul className="mt-4 space-y-2">
               <li>
                 <Link href="/gallery" className="text-sm text-muted-foreground hover:text-foreground">
                   Gallery
                 </Link>
               </li>
+            </ul>
+          </div>
+
+          {/* Explore */}
+          <div>
+            <h3 className="text-sm font-semibold">Explore</h3>
+            <ul className="mt-4 space-y-2">
               <li>
                 <a href="https://www.x402.org/" target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-foreground">
                   x402 Protocol
@@ -58,6 +60,8 @@ export function SiteFooter() {
               </li>
             </ul>
           </div>
+
+          {/* Account */}
           <div>
             <h3 className="text-sm font-semibold">Account</h3>
             <ul className="mt-4 space-y-2">

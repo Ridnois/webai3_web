@@ -1,8 +1,8 @@
-# webai3 — Pay-Per-Use AI Inference on Web3
+# web3-ai — Pay-Per-Use AI Inference on Web3
 
 A Web3-native AI inference platform where users authenticate with their Ethereum wallet and pay per inference using USDC via the [x402 payment protocol](https://www.x402.org/). No subscriptions, no accounts — connect your wallet, run a model, pay only for what you use.
 
-Built on **Base** (Coinbase L2), powered by **Replicate** for model execution, **Cloudflare R2** for media storage, and **x402** for trustless USDC payments.
+Built on **Base** (Coinbase L2), powered by **Replicate** for model execution, **Cloudflare R2** for permanent media storage, and **x402** for trustless USDC payments.
 
 ---
 
@@ -12,16 +12,21 @@ Built on **Base** (Coinbase L2), powered by **Replicate** for model execution, *
 |---|---|
 | Wallet authentication | Sign-In With Ethereum (SIWE / EIP-4361) — no passwords |
 | x402 USDC payments | Pay-per-inference with USDC on Base via Coinbase x402 facilitator |
+| Settlement before compute | Payment is settled on-chain before inference runs — no free rides |
 | Cost estimation | Upfront cost estimates before running a model |
 | Text to Image | Generate images from prompts using diffusion models |
 | Text to Text | Generate, summarize, or transform text with language models |
 | Text to Sound | Generate music, effects, or speech from text descriptions |
+| Prompt templates | 16 curated templates across all task types for quick starts |
+| Public gallery | Browse and share creations with permalink pages and OG metadata |
 | Model selector | Browse top Replicate models per task type |
 | Inference history | Full history of past runs with result replay |
+| Share toggle | Make any inference public/private with one click, copy share link |
 | User dashboard | Personal stats — total inferences, spend, usage breakdown |
 | Admin dashboard | Platform-wide metrics and usage monitoring |
-| Media persistence | Images and audio uploaded to Cloudflare R2 with presigned URLs |
+| Permanent media storage | Images and audio stored on Cloudflare R2 with permanent public URLs |
 | USDC balance display | ETH + USDC balance on Base visible in the wallet panel |
+| On-chain receipts | Every inference has a settlement transaction hash for transparency |
 | Local dev chain | Anvil fork of Base Sepolia for local development |
 
 ---
@@ -34,13 +39,13 @@ Built on **Base** (Coinbase L2), powered by **Replicate** for model execution, *
 | Language | TypeScript (strict) |
 | Styling | Tailwind CSS v4, shadcn/ui (New York), Geist font |
 | Web3 | Wagmi v2, viem, SIWE |
-| Payments | x402 protocol, USDC on Base |
+| Payments | x402 protocol (EIP-3009 transferWithAuthorization), USDC on Base |
 | Server state | TanStack React Query v5 |
 | Validation | Zod |
 | Database | PostgreSQL + Drizzle ORM |
-| Auth sessions | iron-session |
+| Auth sessions | iron-session (encrypted HTTP-only cookies) |
 | AI models | Replicate API |
-| Media storage | Cloudflare R2 (S3-compatible) |
+| Media storage | Cloudflare R2 (S3-compatible, public bucket) |
 | Testing | Vitest, Testing Library, jsdom |
 | Package manager | pnpm |
 | Networks | Base Mainnet (8453), Base Sepolia (84532), Anvil local (31337) |
@@ -61,8 +66,10 @@ src/
 │   │   ├── inference/
 │   │   │   ├── route.ts              # POST — run a model (x402 payment)
 │   │   │   └── estimate/route.ts     # POST — cost estimate before payment
-│   │   ├── inferences/               # GET list, GET [id]
+│   │   ├── inferences/               # GET list, GET/PATCH [id]
 │   │   ├── models/                   # GET available models from Replicate
+│   │   ├── gallery/                  # GET public gallery (paginated)
+│   │   ├── r/[id]/                   # GET public permalink for shared inference
 │   │   ├── stats/                    # GET platform-wide stats
 │   │   ├── user/stats/               # GET per-user stats
 │   │   └── admin/metrics/            # GET admin metrics (protected)
@@ -71,22 +78,27 @@ src/
 │   │   ├── text-to-image/
 │   │   ├── text-to-text/
 │   │   └── text-to-sound/
+│   ├── gallery/page.tsx              # Public gallery browser
+│   ├── templates/page.tsx            # Prompt templates browser
+│   ├── r/[id]/page.tsx               # Public permalink page (OG metadata)
 │   └── history/
 │       ├── page.tsx
-│       └── [id]/page.tsx
+│       └── [id]/page.tsx             # Detail view with share toggle
 ├── components/
 │   ├── ui/                           # shadcn/ui primitives (auto-generated)
-│   ├── layout/                       # site-header, site-footer
+│   ├── layout/                       # site-header (mobile menu), site-footer
 │   ├── auth/                         # sign-in-button
 │   ├── wallet/                       # wallet-button, wallet-details, connect-dialog
 │   ├── inference/                    # form, results, loading, model-selector,
 │   │                                 # cost-estimate, payment-confirm-dialog,
 │   │                                 # task-card, inference-page-layout
+│   ├── gallery/                      # gallery-grid, public-result-view
+│   ├── templates/                    # template-grid
 │   ├── dashboard/                    # user-dashboard
 │   ├── admin/                        # admin-dashboard
 │   ├── history/                      # inference-history, inference-history-card
-│   └── sections/                     # landing page: hero, features, how-it-works,
-│                                     # stats, cta
+│   └── sections/                     # landing page: hero, showcase, how-it-works,
+│                                     # features, pricing, templates, cta
 ├── hooks/
 │   ├── use-auth.ts                   # SIWE auth flow
 │   ├── use-inference.ts              # Run model mutation
@@ -95,6 +107,8 @@ src/
 │   ├── use-x402-payment.ts           # x402 USDC payment flow
 │   ├── use-inference-history.ts      # Paginated history
 │   ├── use-inference-detail.ts       # Single inference detail
+│   ├── use-gallery.ts                # Public gallery data
+│   ├── use-share-inference.ts        # Toggle public/private mutation
 │   ├── use-wallet-balances.ts        # ETH + USDC balance
 │   ├── use-user-stats.ts             # Per-user usage stats
 │   ├── use-platform-stats.ts         # Platform-wide stats
@@ -105,6 +119,7 @@ src/
 │   │   └── schema.ts                 # users, inferences tables + enums
 │   ├── x402.ts                       # x402 payment protocol helpers
 │   ├── pricing.ts                    # Cost estimation + USDC conversion
+│   ├── templates.ts                  # Prompt template definitions (16 templates)
 │   ├── model-discovery.ts            # Replicate model discovery
 │   ├── inference-utils.ts            # Inference processing utilities
 │   ├── inference-error.ts            # Structured inference error handling
@@ -112,7 +127,7 @@ src/
 │   ├── contracts.ts                  # USDC contract addresses per chain
 │   ├── session.ts                    # iron-session config
 │   ├── replicate.ts                  # Replicate SDK singleton
-│   ├── r2.ts                         # R2 upload + presigned URL helpers
+│   ├── r2.ts                         # R2 upload + public URL helpers
 │   ├── auth.ts                       # requireAuth helper
 │   ├── admin.ts                      # Admin authorization (requireAdmin)
 │   ├── env.ts                        # Client env validation (Zod)
@@ -133,30 +148,36 @@ src/
 ### Payment flow (x402)
 
 ```
-1. User submits inference request
-2. Client calls POST /api/inference/estimate → get USDC cost estimate
-3. Payment confirmation dialog shown to user
-4. Client signs USDC transfer via x402 (EIP-3009 transferWithAuthorization)
-5. Server receives X-PAYMENT header with signed authorization
-6. Server calls x402 facilitator /verify → validates payment signature
-7. Server runs inference via Replicate
-8. Server calls x402 facilitator /settle → executes USDC transfer on-chain
-9. Server stores result + payment tx hash in DB
+1. Client sends POST /api/inference (no payment header)
+2. Server returns 402 with Payment-Required header (estimated cost)
+3. Client signs USDC transferWithAuthorization via wallet (EIP-3009)
+4. Client resends request with Payment-Signature header
+5. Server verifies signature with x402 facilitator
+6. Server settles payment on-chain (USDC transferred)         ← before inference
+7. Server runs inference via Replicate                         ← after settlement
+8. Server uploads media to R2 (if applicable), stores record in DB
+9. Server returns result with Payment-Response header
 ```
+
+Settlement happens **before** inference — if payment fails, no compute runs. If inference fails after settlement, the failure is recorded with the payment transaction hash for auditability.
 
 ### Inference pipeline
 
 ```
 POST /api/inference
-  1. Verify session (iron-session)         → 401 if unauthenticated
-  2. Decode + verify x402 payment header   → 402 if missing/invalid
-  3. Validate request body (Zod)           → 400 on schema error
-  4. Run model via Replicate SDK
-  5a. Text output  → store in DB (outputData jsonb)
-  5b. Media output → download → upload to R2 → generate presigned URL
-  6. Settle payment via x402 facilitator   → on-chain USDC transfer
-  7. Insert inference record into PostgreSQL (with payment details)
-  8. Return { id, output, status, metrics, cost }
+  Phase 1 — No payment header:
+    → Return 402 with Payment-Required header (estimated cost in USDC)
+
+  Phase 2 — Has Payment-Signature header:
+    1. Decode + validate payment payload                    → 400 if malformed
+    2. Rebuild payment requirement from estimated cost
+    3. Verify with x402 facilitator                         → 402 if invalid
+    4. Settle payment on-chain via x402 facilitator         → 402 if settlement fails
+    5. Run model via Replicate SDK
+    6a. Text output  → store in DB (outputData jsonb)
+    6b. Media output → download → upload to R2 → return permanent public URL
+    7. Insert inference record into PostgreSQL
+    8. Return { id, output, status, metrics } + Payment-Response header
 ```
 
 ### Authentication flow (SIWE)
@@ -179,7 +200,7 @@ POST /api/inference
 - pnpm 9+
 - PostgreSQL database
 - [Replicate](https://replicate.com) API token
-- [Cloudflare R2](https://developers.cloudflare.com/r2/) bucket + credentials
+- [Cloudflare R2](https://developers.cloudflare.com/r2/) bucket with public access enabled
 - An Ethereum wallet address to receive USDC payments
 
 ### 1. Install dependencies
@@ -207,6 +228,7 @@ Required server-side variables:
 | `R2_ACCESS_KEY_ID` | R2 access key |
 | `R2_SECRET_ACCESS_KEY` | R2 secret key |
 | `R2_BUCKET_NAME` | R2 bucket name |
+| `R2_PUBLIC_URL` | Public URL for the R2 bucket (e.g. `https://pub-xxxx.r2.dev`) |
 | `RECEIVER_ADDRESS` | Ethereum address that receives USDC payments |
 
 Optional server-side variables:
@@ -215,7 +237,6 @@ Optional server-side variables:
 |---|---|---|
 | `INFERENCE_RATE_PER_SEC` | `0.001` | USDC cost per second of Replicate execution time |
 | `X402_FACILITATOR_URL` | `https://www.x402.org/facilitator` | x402 facilitator endpoint (testnet) |
-| `R2_PUBLIC_URL` | — | Public CDN URL for the R2 bucket |
 | `ADMIN_ADDRESSES` | — | Comma-separated admin wallet addresses |
 
 Optional client-side variables:
@@ -252,7 +273,7 @@ pnpm chain:start   # Start Anvil fork of Base Sepolia
 pnpm chain:fund    # Fund test wallets with USDC
 ```
 
-Set `NEXT_PUBLIC_ENABLE_DEV_CHAIN=true` in `.env.local` to enable the local chain in the UI. Note: the x402 facilitator does not support local Anvil chains — use Base Sepolia for testing payments end-to-end.
+Set `NEXT_PUBLIC_ENABLE_DEV_CHAIN=true` in `.env.local` to enable the local chain in the UI. Note: the x402 facilitator does not support local Anvil chains — payment settlement is mocked with random transaction hashes. Use Base Sepolia for testing real payments end-to-end.
 
 ---
 
@@ -285,6 +306,7 @@ Set `NEXT_PUBLIC_ENABLE_DEV_CHAIN=true` in `.env.local` to enable the local chai
 | `actual_cost_usdc` | numeric(18,6) | Final cost based on actual execution time |
 | `payment_tx_hash` | text (unique) | On-chain USDC payment transaction hash |
 | `payment_chain_id` | integer | Chain the payment was made on |
+| `is_public` | integer | `0` = private (default), `1` = visible in gallery |
 | `created_at` | timestamptz | Inference timestamp |
 
 ---
@@ -316,6 +338,14 @@ All endpoints return JSON. Errors follow the shape `{ error: string, code: strin
 | `POST` | `/api/inference` | Yes | Run a model (requires x402 payment header) |
 | `GET` | `/api/inferences?page=1&limit=20` | Yes | Paginated history |
 | `GET` | `/api/inferences/[id]` | Yes | Single inference detail |
+| `PATCH` | `/api/inferences/[id]` | Yes | Toggle `isPublic` (owner only) |
+
+### Gallery & Sharing
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/gallery?page=1&limit=20&task=<task>` | No | Public gallery (paginated, filterable) |
+| `GET` | `/api/r/[id]` | No | Public permalink for a shared inference |
 
 ### Stats
 
@@ -324,6 +354,25 @@ All endpoints return JSON. Errors follow the shape `{ error: string, code: strin
 | `GET` | `/api/stats` | No | Platform-wide aggregate stats |
 | `GET` | `/api/user/stats` | Yes | Per-user usage stats |
 | `GET` | `/api/admin/metrics` | Admin | Admin-only platform metrics |
+
+---
+
+## Pages
+
+| Path | Description |
+|---|---|
+| `/` | Landing page (hero, showcase, how-it-works, features, pricing, templates, CTA) |
+| `/inference` | Task selector |
+| `/inference/text-to-image` | Image generation (supports URL param pre-fill from templates) |
+| `/inference/text-to-text` | Text generation |
+| `/inference/text-to-sound` | Audio generation |
+| `/templates` | Browse 16 curated prompt templates with task-type filter |
+| `/gallery` | Public gallery with filterable grid (all/images/text/audio) |
+| `/r/[id]` | Public permalink page with OG metadata for social unfurling |
+| `/dashboard` | User dashboard with stats |
+| `/history` | Inference history list |
+| `/history/[id]` | Inference detail with share toggle + copy link |
+| `/admin` | Admin panel (protected) |
 
 ---
 
@@ -356,30 +405,6 @@ pnpm dlx shadcn add <component>   # Add a new shadcn/ui component
 
 ---
 
-## Testing
-
-Tests use **Vitest** with **Testing Library** and **jsdom**. Test files are colocated with the module they test:
-
-```
-src/lib/pricing.ts
-src/lib/pricing.test.ts           ← doesn't exist yet, but this is the pattern
-
-src/app/api/inference/route.ts
-src/app/api/inference/route.test.ts
-```
-
-Existing test files:
-- `src/app/api/inference/route.test.ts`
-- `src/app/api/models/route.test.ts`
-- `src/lib/inference-error.test.ts`
-- `src/lib/inference-utils.test.ts`
-- `src/lib/model-discovery.test.ts`
-- `src/lib/x402.test.ts`
-- `src/types/inference.test.ts`
-- `src/types/task-config.test.ts`
-
----
-
 ## Deployment
 
 The app is a standard Next.js application deployable to any Node.js host (Vercel, Railway, Fly.io, etc.).
@@ -389,7 +414,7 @@ Required before deploying:
 1. Set all environment variables from the [configuration section](#2-configure-environment-variables) in your host's secrets manager.
 2. Ensure `DATABASE_URL` points to a production PostgreSQL instance.
 3. Run `pnpm db:migrate` against the production database as part of the deploy step.
-4. Confirm your R2 bucket CORS policy allows requests from your production domain.
+4. Confirm your R2 bucket has public access enabled and CORS allows requests from your production domain.
 5. Set `SESSION_SECRET` to a securely generated random string (minimum 32 characters).
 6. Set `RECEIVER_ADDRESS` to the production wallet that should receive USDC payments.
 7. Set `X402_FACILITATOR_URL` to the mainnet facilitator: `https://api.cdp.coinbase.com/platform/v2/x402`.
