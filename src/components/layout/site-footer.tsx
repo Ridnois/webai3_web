@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 
 export function SiteFooter() {
@@ -11,64 +12,64 @@ export function SiteFooter() {
             <h3 className="text-sm font-semibold">Product</h3>
             <ul className="mt-4 space-y-2">
               <li>
-                <a href="#how-it-works" className="text-sm text-muted-foreground hover:text-foreground">
+                <a href="/#how-it-works" className="text-sm text-muted-foreground hover:text-foreground">
                   How it Works
                 </a>
               </li>
               <li>
-                <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground">
+                <a href="/#pricing" className="text-sm text-muted-foreground hover:text-foreground">
                   Pricing
                 </a>
               </li>
               <li>
-                <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
-                  Models
-                </a>
+                <Link href="/inference" className="text-sm text-muted-foreground hover:text-foreground">
+                  Inference
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
-                  Documentation
-                </a>
+                <Link href="/templates" className="text-sm text-muted-foreground hover:text-foreground">
+                  Templates
+                </Link>
               </li>
             </ul>
           </div>
           <div>
-            <h3 className="text-sm font-semibold">Developers</h3>
+            <h3 className="text-sm font-semibold">Explore</h3>
             <ul className="mt-4 space-y-2">
               <li>
-                <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
-                  API Reference
-                </a>
+                <Link href="/gallery" className="text-sm text-muted-foreground hover:text-foreground">
+                  Gallery
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
-                  GitHub
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
+                <a href="https://www.x402.org/" target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-foreground">
                   x402 Protocol
                 </a>
               </li>
               <li>
-                <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
-                  Status
+                <a href="https://base.org" target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-foreground">
+                  Base L2
+                </a>
+              </li>
+              <li>
+                <a href="https://replicate.com" target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-foreground">
+                  Replicate
                 </a>
               </li>
             </ul>
           </div>
           <div>
-            <h3 className="text-sm font-semibold">Legal</h3>
+            <h3 className="text-sm font-semibold">Account</h3>
             <ul className="mt-4 space-y-2">
               <li>
-                <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
-                  Privacy Policy
-                </a>
+                <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">
+                  Dashboard
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
-                  Terms of Service
-                </a>
+                <Link href="/history" className="text-sm text-muted-foreground hover:text-foreground">
+                  History
+                </Link>
               </li>
             </ul>
           </div>

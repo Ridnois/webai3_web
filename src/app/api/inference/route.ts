@@ -149,7 +149,6 @@ export async function POST(request: NextRequest) {
   let settlementResponse;
   if (isLocalDevChain(chainId)) {
     settlementTxHash = `0x${crypto.randomUUID().replace(/-/g, "")}${crypto.randomUUID().replace(/-/g, "")}`;
-    console.log("[dev] Skipping x402 facilitator settle for local chain");
   } else {
     try {
       settlementResponse = await settleWithFacilitator(paymentPayload, paymentRequirement);
