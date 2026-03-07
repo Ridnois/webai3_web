@@ -55,6 +55,7 @@ export const inferences = pgTable("inferences", {
   actualCostUsdc: numeric("actual_cost_usdc", { precision: 18, scale: 6 }),
   paymentTxHash: text("payment_tx_hash").unique(),
   paymentChainId: integer("payment_chain_id"),
+  isPublic: integer("is_public").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

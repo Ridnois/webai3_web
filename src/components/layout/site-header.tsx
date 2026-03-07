@@ -17,6 +17,8 @@ export function SiteHeader() {
           <NavLink href="#how-it-works">How it Works</NavLink>
           <NavLink href="#features">Features</NavLink>
           <NavLink href="/inference">Inference</NavLink>
+          <NavLink href="/templates">Templates</NavLink>
+          <NavLink href="/gallery">Gallery</NavLink>
           {isAuthenticated && <NavLink href="/dashboard">Dashboard</NavLink>}
           <NavLink href="/history">History</NavLink>
           {isAdmin && <NavLink href="/admin">Admin</NavLink>}

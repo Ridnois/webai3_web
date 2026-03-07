@@ -1,8 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { toast } from "sonner";
 import { useInferenceDetail } from "@/hooks/use-inference-detail";
+import { useShareInference } from "@/hooks/use-share-inference";
 import { useAuth } from "@/hooks/use-auth";
 import { TextResult } from "@/components/inference/text-result";
 import { ImageResult } from "@/components/inference/image-result";
@@ -11,12 +14,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Shield } from "lucide-react";
+import { ArrowLeft, Shield, Share2, Globe, Lock, Copy, Check } from "lucide-react";
 
 export default function InferenceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { isAuthenticated, isLoading: authLoading, signIn, isSigningIn } = useAuth();
   const { data, isLoading, error } = useInferenceDetail(id);
+  const shareMutation = useShareInference();
+  const [linkCopied, setLinkCopied] = useState(false);
 
   if (authLoading || isLoading) {
     return (
@@ -56,6 +61,35 @@ export default function InferenceDetailPage() {
     );
   }
 
+  const isPublic = data.isPublic === 1;
+  const canShare = data.status === "succeeded";
+  const publicUrl = typeof window !== "undefined"
+    ? `${window.location.origin}/r/${data.id}`
+    : `/r/${data.id}`;
+
+  function handleToggleShare() {
+    if (!data) return;
+    shareMutation.mutate(
+      { id: data.id, isPublic: !isPublic },
+      {
+        onSuccess: (result) => {
+          toast.success(result.isPublic ? "Shared to gallery" : "Removed from gallery");
+        },
+        onError: (err) => {
+          toast.error(err.message);
+        },
+      }
+    );
+  }
+
+  function handleCopyLink() {
+    navigator.clipboard.writeText(publicUrl).then(() => {
+      setLinkCopied(true);
+      toast.success("Link copied");
+      setTimeout(() => setLinkCopied(false), 2000);
+    });
+  }
+
   const output =
     data.outputType === "text"
       ? data.outputData
@@ -82,17 +116,51 @@ export default function InferenceDetailPage() {
               {new Date(data.createdAt).toLocaleString()}
             </p>
           </div>
-          <Badge
-            variant={
-              data.status === "succeeded"
-                ? "default"
-                : data.status === "failed"
-                  ? "destructive"
-                  : "secondary"
-            }
-          >
-            {data.status}
-          </Badge>
+          <div className="flex items-center gap-2">
+            {canShare && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleToggleShare}
+                  disabled={shareMutation.isPending}
+                >
+                  {isPublic ? (
+                    <>
+                      <Globe className="size-4" />
+                      Public
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="size-4" />
+                      Private
+                    </>
+                  )}
+                </Button>
+                {isPublic && (
+                  <Button variant="outline" size="sm" onClick={handleCopyLink}>
+                    {linkCopied ? (
+                      <Check className="size-4" />
+                    ) : (
+                      <Copy className="size-4" />
+                    )}
+                    {linkCopied ? "Copied" : "Copy Link"}
+                  </Button>
+                )}
+              </>
+            )}
+            <Badge
+              variant={
+                data.status === "succeeded"
+                  ? "default"
+                  : data.status === "failed"
+                    ? "destructive"
+                    : "secondary"
+              }
+            >
+              {data.status}
+            </Badge>
+          </div>
         </div>
 
         <Card>

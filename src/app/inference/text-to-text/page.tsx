@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { InferencePageLayout } from "@/components/inference/inference-page-layout";
 
@@ -8,5 +9,9 @@ export const metadata: Metadata = {
 };
 
 export default function TextToTextPage() {
-  return <InferencePageLayout task="text-to-text" />;
+  return (
+    <Suspense>
+      <InferencePageLayout task="text-to-text" />
+    </Suspense>
+  );
 }

@@ -15,6 +15,7 @@ export interface InferenceDetail {
   status: string;
   errorMessage: string | null;
   predictTimeMs: number | null;
+  isPublic: number;
   createdAt: string;
   mediaUrls: string[] | null;
 }

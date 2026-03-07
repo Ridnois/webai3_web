@@ -18,6 +18,7 @@ interface InferenceFormProps {
   submitLabel?: string;
   loadingLabel?: string;
   helperText?: string;
+  initialValues?: Record<string, string | number>;
 }
 
 export function InferenceForm({
@@ -29,6 +30,7 @@ export function InferenceForm({
   submitLabel,
   loadingLabel,
   helperText,
+  initialValues,
 }: InferenceFormProps) {
   const [values, setValues] = useState<Record<string, string | number>>(() => {
     const defaults: Record<string, string | number> = {};
@@ -36,6 +38,10 @@ export function InferenceForm({
       if (field.defaultValue !== undefined) {
         defaults[field.name] = field.defaultValue;
       }
+    }
+    // Override defaults with initial values (e.g. from URL params / templates)
+    if (initialValues) {
+      Object.assign(defaults, initialValues);
     }
     return defaults;
   });
