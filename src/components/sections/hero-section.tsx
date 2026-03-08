@@ -33,9 +33,9 @@ export function HeroSection() {
           </h1>
 
           <p className="mx-auto mt-8 max-w-2xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
-            Generate images, text, and audio with top AI models.
-            No subscriptions. No API keys. Just connect your wallet and pay
-            per use with USDC on Base.
+            Generate images, text, and audio with top models from Replicate.
+            Authenticate with your wallet, authorize payment via x402, and pay
+            per inference in USDC on Base.
           </p>
 
           {/* Task pills */}
@@ -76,7 +76,7 @@ export function HeroSection() {
 
           {/* Trust line */}
           <p className="mt-8 text-xs text-muted-foreground/60">
-            USDC on Base &middot; Sub-cent gas fees &middot; Instant settlement &middot; On-chain receipts
+            USDC on Base &middot; x402 settlement before compute &middot; On-chain receipts per inference
           </p>
         </div>
       </div>

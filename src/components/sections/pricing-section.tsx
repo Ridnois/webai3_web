@@ -40,7 +40,7 @@ const tasks = [
 const perks = [
   "No subscriptions or monthly fees",
   "No minimum balance required",
-  "Pay exact cost per inference in USDC",
+  "Usage-based USDC pricing with upfront estimate",
   "On-chain settlement receipt for every run",
   "Media stored permanently in the cloud",
 ];
@@ -54,7 +54,7 @@ export function PricingSection() {
             Simple, transparent pricing
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            Pay only for what you use. Cost is based on model execution time at $0.001 USDC per second.
+            Pay only for what you use. Cost is based on model execution time with a default protocol rate of $0.001 USDC/sec.
           </p>
         </div>
 
@@ -88,6 +88,9 @@ export function PricingSection() {
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Models: {task.examples}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Estimate only. Final cost depends on actual model runtime.
                   </p>
                   <Button variant="outline" size="sm" asChild>
                     <Link href={task.href}>

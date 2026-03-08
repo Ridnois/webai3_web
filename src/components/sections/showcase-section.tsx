@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   ImagePlus,
   MessageSquareText,
@@ -45,7 +44,7 @@ export function ShowcaseSection() {
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
             Generate images, text, and audio from a single interface.
-            Pick your model, write your prompt, pay with USDC.
+            Pick your model, write your prompt, authorize payment, and receive a verifiable result.
           </p>
         </div>
 

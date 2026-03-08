@@ -16,7 +16,7 @@ const features = [
     icon: Coins,
     title: "True Pay-Per-Use",
     description:
-      "No subscriptions, no credits, no minimums. You pay the exact cost of your inference in USDC — fractions of a cent per request.",
+      "No subscriptions, no credits, no minimums. Inference is billed in USDC based on execution time using the configured protocol rate.",
   },
   {
     icon: KeyRound,
@@ -28,7 +28,7 @@ const features = [
     icon: Layers,
     title: "Multi-Model Access",
     description:
-      "Flux, Stable Diffusion, Llama, Mixtral, Stable Audio, and more. One interface to access the best open-source AI models.",
+      "Flux, Stable Diffusion, Llama, Mixtral, Stable Audio, and more. One interface for text, image, and audio models.",
   },
   {
     icon: ShieldCheck,
@@ -58,7 +58,7 @@ const features = [
     icon: Zap,
     title: "Built on Base",
     description:
-      "Sub-cent gas fees, near-instant finality, and Coinbase ecosystem. The fastest path from USDC to AI output.",
+      "Base mainnet + Base Sepolia support with optional local Anvil mode for development and integration testing.",
   },
 ];
 

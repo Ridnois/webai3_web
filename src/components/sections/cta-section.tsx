@@ -14,11 +14,11 @@ export function CtaSection() {
 
           <div className="relative mx-auto max-w-2xl text-center">
             <h2 className="text-3xl font-bold tracking-tight sm:text-5xl">
-              Ready to create?
+              Ready to run your first paid inference?
             </h2>
             <p className="mt-6 text-lg text-muted-foreground leading-relaxed">
-              No sign-up required. Connect your wallet, pick a model, and get
-              your first AI result in under 30 seconds.
+              No sign-up required. Connect your wallet, choose a model, and
+              run a USDC-settled inference with an on-chain payment receipt.
             </p>
             <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
               <Button size="lg" asChild>

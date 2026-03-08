@@ -13,7 +13,7 @@ export function SiteFooter() {
           <div className="col-span-2 md:col-span-1">
             <Logo />
             <p className="mt-3 text-sm text-muted-foreground">
-              Pay-per-use AI inference powered by x402 and USDC on Base.
+              Wallet-authenticated AI inference with x402 payments and USDC settlement on Base.
             </p>
           </div>
 

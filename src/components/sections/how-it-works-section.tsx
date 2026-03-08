@@ -16,27 +16,27 @@ interface Step {
 const steps: Step[] = [
   {
     icon: Wallet,
-    title: "Connect Wallet",
+    title: "Sign in with Wallet",
     description:
-      "Sign in with your Ethereum wallet. No accounts, no passwords, no sign-up forms.",
+      "Authenticate via SIWE (EIP-4361). No email/password accounts or API key provisioning required.",
   },
   {
     icon: MousePointerClick,
-    title: "Pick a Model & Prompt",
+    title: "Request Cost + Model Run",
     description:
-      "Choose from top AI models on Replicate. Use a template or write your own prompt.",
+      "Choose a model and prompt. The API returns a 402 payment requirement with the estimated USDC amount.",
   },
   {
     icon: DollarSign,
-    title: "Sign a USDC Payment",
+    title: "Authorize USDC Transfer",
     description:
-      "Approve a micropayment in your wallet. No gas fees to worry about on Base L2.",
+      "Sign an EIP-3009 transferWithAuthorization payload. The x402 facilitator handles on-chain settlement on Base.",
   },
   {
     icon: Sparkles,
     title: "Get Your Result",
     description:
-      "Payment settles on-chain, your AI result arrives instantly. Share it or keep it private.",
+      "Payment settles before compute starts. Receive your result plus a payment receipt hash, then keep it private or share it publicly.",
   },
 ];
 
@@ -46,7 +46,7 @@ export function HowItWorksSection() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <SectionHeading
           title="How it Works"
-          subtitle="From wallet to AI result in four steps."
+          subtitle="The x402 flow from authentication to on-chain settlement."
         />
         <div className="mt-16 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {steps.map((step, i) => {

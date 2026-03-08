@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "web3-ai — Pay-Per-Use AI Inference",
   description:
-    "AI inference powered by micropayments. No subscriptions, no API keys. Connect your wallet and pay only for what you use.",
+    "Wallet-authenticated AI inference with x402 micropayments and USDC settlement on Base. Pay per run, with on-chain receipts.",
 };
 
 export default function RootLayout({
