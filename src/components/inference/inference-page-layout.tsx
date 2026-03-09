@@ -3,7 +3,14 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAccount } from "wagmi";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import {
+  AudioLines,
+  ImagePlus,
+  Loader2,
+  MessageSquareText,
+  Sparkles,
+} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ModelSelector } from "./model-selector";
 import { InferenceForm } from "./inference-form";
@@ -23,13 +30,6 @@ import type { TaskType, ReplicateModel } from "@/types/inference";
 import { toInferenceApiError } from "@/lib/inference-error";
 import { formatUsdc, usdcToOnChainAmount } from "@/lib/pricing";
 import { toastInferenceError, toastInsufficientFunds } from "@/lib/toast";
-import {
-  ImagePlus,
-  Loader2,
-  MessageSquareText,
-  AudioLines,
-  Sparkles,
-} from "lucide-react";
 
 const ICON_MAP: Record<string, typeof ImagePlus> = {
   ImagePlus,
@@ -50,13 +50,11 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
     null
   );
   const modelSchema = useModelSchema(selectedModel);
-  // Use dynamic schema fields when available, fall back to static config
   const activeFields =
     modelSchema.data && modelSchema.data.length > 0
       ? modelSchema.data
       : config.fields;
 
-  // Read initial values from URL params (used by prompt templates)
   const initialValues = useMemo(() => {
     const vals: Record<string, string | number> = {};
     for (const field of activeFields) {
@@ -67,9 +65,12 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
     }
     return Object.keys(vals).length > 0 ? vals : undefined;
   }, [searchParams, activeFields]);
+
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
-  const [estimatedCostFromServer, setEstimatedCostFromServer] = useState<number | null>(null);
+  const [estimatedCostFromServer, setEstimatedCostFromServer] = useState<
+    number | null
+  >(null);
   const inference = useInference();
   const requestMutation = inference.request;
   const submitMutation = inference.submit;
@@ -148,7 +149,6 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
   const requestError = requestMutation.error;
   const lastToastedErrorRef = useRef<Error | null>(null);
 
-  // Show toast when submit fails (once per unique error)
   useEffect(() => {
     if (submitError && submitError !== lastToastedErrorRef.current) {
       lastToastedErrorRef.current = submitError;
@@ -165,7 +165,6 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
     }
   }, [submitError]);
 
-  // Show toast when request fails (once per unique error)
   useEffect(() => {
     if (requestError && requestError !== lastToastedErrorRef.current) {
       lastToastedErrorRef.current = requestError;
@@ -173,14 +172,12 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
     }
   }, [requestError]);
 
-  // After wallet connects, auto-sign-in if there's a pending inference
   useEffect(() => {
     if (isConnected && !isAuthenticated && !isSigningIn && pendingInput.current) {
       signIn();
     }
   }, [isConnected, isAuthenticated, isSigningIn, signIn]);
 
-  // After sign-in completes, fire the request phase if pending
   useEffect(() => {
     if (
       shouldAutoRequestAfterSignIn.current &&
@@ -194,7 +191,6 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
     }
   }, [isAuthenticated, selectedModel, requestMutation.isPending, startRequestPhase]);
 
-  // When payment is signed, submit with the signed header
   useEffect(() => {
     if (
       x402Payment.status === "signed" &&
@@ -215,7 +211,6 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
       return;
     }
 
-    // Not connected -> open wallet connect dialog
     if (!isConnected) {
       pendingInput.current = input;
       shouldAutoRequestAfterSignIn.current = true;
@@ -223,7 +218,6 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
       return;
     }
 
-    // Connected but not signed in -> trigger SIWE sign-in
     if (!isAuthenticated) {
       pendingInput.current = input;
       shouldAutoRequestAfterSignIn.current = true;
@@ -231,7 +225,6 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
       return;
     }
 
-    // Authenticated -> fire request phase (will get 402)
     pendingInput.current = input;
     startRequestPhase(input);
   }
@@ -282,34 +275,88 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
           ? "Running..."
           : "Processing...";
 
-  // Use the submit result for display
   const result = submitMutation.data?.response;
+  const workflowSteps = [
+    {
+      label: "Connect",
+      active: !isConnected,
+      complete: isConnected,
+    },
+    {
+      label: "Authenticate",
+      active: isConnected && !isAuthenticated,
+      complete: isAuthenticated,
+    },
+    {
+      label: "Authorize",
+      active: paymentDialogOpen || x402Payment.status === "signing",
+      complete:
+        x402Payment.status === "signed" ||
+        submitMutation.isPending ||
+        Boolean(result),
+    },
+    {
+      label: "Run",
+      active: submitMutation.isPending,
+      complete: Boolean(result),
+    },
+  ];
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      {/* Page header */}
-      <div className="mb-8 flex items-center gap-4">
-        <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          <Icon className="size-6" />
-        </div>
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight">
-              {config.label}
-            </h1>
-            <Badge variant="outline">{config.outputType}</Badge>
+      <div className="mb-8 rounded-[2rem] border border-border/70 bg-background/72 p-6 shadow-[0_24px_70px_-42px_rgba(15,23,42,0.45)] backdrop-blur">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex size-14 items-center justify-center rounded-2xl bg-linear-to-br from-primary/20 via-primary/10 to-chart-2/15 text-primary shadow-sm">
+              <Icon className="size-6" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="text-3xl font-black tracking-[-0.04em]">
+                  {config.label}
+                </h1>
+                <Badge
+                  variant="outline"
+                  className="rounded-full border-border/70 bg-background/75 px-3 py-1"
+                >
+                  {config.outputType}
+                </Badge>
+              </div>
+              <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+                {config.description}
+              </p>
+            </div>
           </div>
-          <p className="text-sm text-muted-foreground">{config.description}</p>
+          <div className="grid gap-2 sm:grid-cols-4">
+            {workflowSteps.map((step) => (
+              <div
+                key={step.label}
+                className={[
+                  "rounded-2xl border px-3 py-3 text-left transition-colors",
+                  step.complete
+                    ? "border-primary/30 bg-primary/10"
+                    : step.active
+                      ? "border-chart-2/35 bg-chart-2/10"
+                      : "border-border/70 bg-background/70",
+                ].join(" ")}
+              >
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  Step
+                </p>
+                <p className="mt-1 text-sm font-semibold text-foreground">
+                  {step.label}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Two-column layout */}
       <div className="grid gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-        {/* Left: controls */}
         <div className="flex flex-col gap-6">
-          <Card>
+          <Card className="rounded-[1.8rem] border-border/70 bg-background/72 shadow-[0_20px_65px_-46px_rgba(15,23,42,0.45)] backdrop-blur">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+              <CardTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
                 1. Choose a Model
               </CardTitle>
             </CardHeader>
@@ -322,48 +369,51 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="rounded-[1.8rem] border-border/70 bg-background/72 shadow-[0_20px_65px_-46px_rgba(15,23,42,0.45)] backdrop-blur">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+              <CardTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
                 2. Configure &amp; Run
               </CardTitle>
             </CardHeader>
             <CardContent>
               {modelSchema.isLoading && selectedModel ? (
-                <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2 rounded-2xl border border-border/70 bg-background/75 px-4 py-4 text-sm text-muted-foreground">
                   <Loader2 className="size-4 animate-spin" />
                   Loading model parameters…
                 </div>
               ) : (
-              <div className="flex flex-col gap-4">
-                <InferenceForm
-                  key={selectedModel ? `${selectedModel.owner}/${selectedModel.name}` : "none"}
-                  fields={activeFields}
-                  selectedModel={selectedModel}
-                  isLoading={isLoading}
-                  isSubmitDisabled={insufficientFunds}
-                  onSubmit={handleSubmit}
-                  submitLabel={submitLabel}
-                  loadingLabel={loadingLabel}
-                  initialValues={initialValues}
-                  helperText={
-                    insufficientFunds && estimatedCostUsdc != null
-                      ? `Insufficient USDC: requires ${formatUsdc(estimatedCostUsdc)}`
-                      : undefined
-                  }
-                />
-                <CostEstimate task={task} usdcBalance={usdcFormatted} />
-              </div>
+                <div className="flex flex-col gap-4">
+                  <InferenceForm
+                    key={
+                      selectedModel
+                        ? `${selectedModel.owner}/${selectedModel.name}`
+                        : "none"
+                    }
+                    fields={activeFields}
+                    selectedModel={selectedModel}
+                    isLoading={isLoading}
+                    isSubmitDisabled={insufficientFunds}
+                    onSubmit={handleSubmit}
+                    submitLabel={submitLabel}
+                    loadingLabel={loadingLabel}
+                    initialValues={initialValues}
+                    helperText={
+                      insufficientFunds && estimatedCostUsdc != null
+                        ? `Insufficient USDC: requires ${formatUsdc(estimatedCostUsdc)}`
+                        : undefined
+                    }
+                  />
+                  <CostEstimate task={task} usdcBalance={usdcFormatted} />
+                </div>
               )}
             </CardContent>
           </Card>
         </div>
 
-        {/* Right: result (sticky on desktop) */}
-        <div className="lg:sticky lg:top-24 lg:self-start">
-          <Card className="min-h-[320px]">
+        <div className="lg:sticky lg:top-28 lg:self-start">
+          <Card className="min-h-[420px] rounded-[1.8rem] border-border/70 bg-background/72 shadow-[0_20px_65px_-46px_rgba(15,23,42,0.45)] backdrop-blur">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+              <CardTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
                 Result
               </CardTitle>
             </CardHeader>
@@ -378,22 +428,23 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
               )}
 
               {submitError && !submitMutation.isPending && (
-                <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+                <div className="rounded-2xl border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
                   {submitError.message}
                 </div>
               )}
 
               {!result && !submitMutation.isPending && !submitError && (
-                <div className="flex flex-col items-center gap-3 py-16 text-center">
-                  <div className="flex size-14 items-center justify-center rounded-full bg-muted">
-                    <Sparkles className="size-6 text-muted-foreground/50" />
+                <div className="flex flex-col items-center gap-4 py-20 text-center">
+                  <div className="flex size-16 items-center justify-center rounded-full bg-linear-to-br from-primary/14 via-primary/8 to-chart-2/12">
+                    <Sparkles className="size-6 text-primary/70" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">
-                      No results yet
+                    <p className="text-base font-semibold text-foreground">
+                      Your next run appears here
                     </p>
-                    <p className="mt-1 text-xs text-muted-foreground/75">
-                      Select a model and submit your input to see results
+                    <p className="mt-2 max-w-sm text-sm text-muted-foreground/75">
+                      Choose a model, configure the prompt, approve payment, and
+                      this panel will switch into your live result surface.
                     </p>
                   </div>
                 </div>

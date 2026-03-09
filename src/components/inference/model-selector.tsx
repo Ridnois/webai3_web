@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { ChevronDown, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useModels } from "@/hooks/use-models";
 import type { TaskType, ReplicateModel } from "@/types/inference";
-import { ChevronDown, Search } from "lucide-react";
 
 interface ModelSelectorProps {
   task: TaskType;
@@ -26,19 +26,22 @@ function SelectedModelDisplay({
     <button
       type="button"
       onClick={onChangeClick}
-      className="flex w-full items-center justify-between rounded-lg border border-primary bg-primary/5 p-3 text-left transition-colors hover:bg-primary/10"
+      className="flex w-full items-center justify-between rounded-3xl border border-primary/30 bg-linear-to-br from-primary/10 via-background to-chart-2/8 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-[0_18px_50px_-32px_var(--primary)]"
     >
-      <div className="flex flex-col gap-0.5 min-w-0">
-        <span className="text-sm font-medium truncate">
+      <div className="min-w-0 flex flex-col gap-1">
+        <span className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-primary">
+          Selected model
+        </span>
+        <span className="truncate text-sm font-semibold">
           {model.owner}/{model.name}
         </span>
         {model.description && (
-          <p className="text-xs text-muted-foreground line-clamp-1">
+          <p className="line-clamp-1 text-xs text-muted-foreground">
             {model.description}
           </p>
         )}
       </div>
-      <ChevronDown className="size-4 shrink-0 text-muted-foreground ml-2" />
+      <ChevronDown className="ml-2 size-4 shrink-0 text-muted-foreground" />
     </button>
   );
 }
@@ -74,7 +77,7 @@ export function ModelSelector({
 
   if (error) {
     return (
-      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+      <div className="rounded-2xl border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
         Failed to load models: {error.message}
       </div>
     );
@@ -97,15 +100,15 @@ export function ModelSelector({
           placeholder="Search models..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
+          className="h-11 rounded-2xl border-border/70 bg-background/80 pl-9 shadow-sm"
           aria-label="Search models"
         />
       </div>
-      <ScrollArea className="h-[280px]">
+      <ScrollArea className="h-[320px] rounded-3xl border border-border/70 bg-background/70 p-1.5 shadow-sm">
         <div className="grid gap-2 pr-3">
           {isLoading &&
             Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-16 w-full rounded-lg" />
+              <Skeleton key={i} className="h-20 w-full rounded-2xl" />
             ))}
           {filtered?.map((model) => (
             <button
@@ -113,10 +116,10 @@ export function ModelSelector({
               type="button"
               onClick={() => handleSelect(model)}
               className={cn(
-                "flex flex-col gap-1 rounded-lg border p-3 text-left transition-colors hover:bg-accent/50",
+                "flex flex-col gap-2 rounded-[1.4rem] border border-transparent bg-transparent p-4 text-left transition-all hover:-translate-y-0.5 hover:border-border/80 hover:bg-muted/55",
                 selectedModel?.owner === model.owner &&
                   selectedModel?.name === model.name &&
-                  "border-primary bg-primary/5"
+                  "border-primary/30 bg-linear-to-br from-primary/10 via-background to-chart-2/8 shadow-[0_18px_50px_-32px_var(--primary)]"
               )}
               aria-pressed={
                 selectedModel?.owner === model.owner &&
@@ -124,22 +127,22 @@ export function ModelSelector({
               }
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="text-sm font-medium truncate">
+                <span className="truncate text-sm font-semibold">
                   {model.owner}/{model.name}
                 </span>
-                <span className="shrink-0 text-xs text-muted-foreground">
+                <span className="shrink-0 rounded-full border border-border/70 px-2 py-1 text-[11px] text-muted-foreground">
                   {formatRunCount(model.runCount)}
                 </span>
               </div>
               {model.description && (
-                <p className="text-xs text-muted-foreground line-clamp-2">
+                <p className="line-clamp-2 text-xs leading-5 text-muted-foreground">
                   {model.description}
                 </p>
               )}
             </button>
           ))}
           {filtered?.length === 0 && !isLoading && (
-            <p className="py-8 text-center text-sm text-muted-foreground">
+            <p className="py-10 text-center text-sm text-muted-foreground">
               No models found matching &quot;{search}&quot;
             </p>
           )}

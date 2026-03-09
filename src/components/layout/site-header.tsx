@@ -33,12 +33,16 @@ export function SiteHeader() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-50 w-full">
+      <div className="mx-auto max-w-7xl px-4 pt-3 sm:px-6 lg:px-8">
+        <div className="flex h-18 items-center justify-between rounded-[1.6rem] border border-border/70 bg-background/75 px-4 shadow-[0_18px_60px_-34px_rgba(15,23,42,0.45)] backdrop-blur-xl sm:px-5">
         <Logo />
 
         {/* Desktop nav */}
-        <nav className="hidden items-center gap-6 md:flex" aria-label="Main">
+        <nav
+          className="hidden items-center gap-1 rounded-full border border-border/70 bg-muted/55 p-1 md:flex"
+          aria-label="Main"
+        >
           {mainNav.map((item) => (
             <NavLink key={item.href} href={item.href}>
               {item.label}
@@ -61,27 +65,27 @@ export function SiteHeader() {
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <Button
-                variant="ghost"
+                variant="outline"
                 size="icon"
-                className="md:hidden"
+                className="rounded-full md:hidden"
                 aria-label="Open menu"
               >
                 <Menu className="size-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-64">
+            <SheetContent side="right" className="w-72 border-l-border/70 bg-background/95">
               <SheetHeader>
                 <SheetTitle>
                   <Logo />
                 </SheetTitle>
               </SheetHeader>
-              <nav className="flex flex-col gap-1 pt-4" aria-label="Mobile">
+              <nav className="flex flex-col gap-2 pt-6" aria-label="Mobile">
                 {mainNav.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
                     onClick={() => setOpen(false)}
-                    className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                    className="rounded-2xl border border-transparent px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:border-border/70 hover:bg-muted/70 hover:text-foreground"
                   >
                     {item.label}
                   </Link>
@@ -92,7 +96,7 @@ export function SiteHeader() {
                       key={item.href}
                       href={item.href}
                       onClick={() => setOpen(false)}
-                      className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                      className="rounded-2xl border border-transparent px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:border-border/70 hover:bg-muted/70 hover:text-foreground"
                     >
                       {item.label}
                     </Link>
@@ -101,7 +105,7 @@ export function SiteHeader() {
                   <Link
                     href="/admin"
                     onClick={() => setOpen(false)}
-                    className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                    className="rounded-2xl border border-transparent px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:border-border/70 hover:bg-muted/70 hover:text-foreground"
                   >
                     Admin
                   </Link>
@@ -109,6 +113,7 @@ export function SiteHeader() {
               </nav>
             </SheetContent>
           </Sheet>
+        </div>
         </div>
       </div>
     </header>
