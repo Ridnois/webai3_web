@@ -12,7 +12,7 @@ import {
   outputTypeForTask,
 } from "@/lib/inference-utils";
 import {
-  buildPaymentRequirementsResponse,
+  buildPaymentRequiredResponse,
   encodePaymentHeader,
   decodePaymentHeader,
   paymentPayloadSchema,
@@ -73,13 +73,13 @@ export async function POST(request: NextRequest) {
     const estimated = estimateCostUsdc(task, ratePerSec);
     const amountOnChain = usdcToOnChainAmount(estimated);
 
-    const paymentRequirements = buildPaymentRequirementsResponse(
+    const paymentRequired = buildPaymentRequiredResponse(
       chainId,
       amountOnChain,
       "/api/inference"
     );
 
-    const paymentRequiredHeader = encodePaymentHeader(paymentRequirements);
+    const paymentRequiredHeader = encodePaymentHeader(paymentRequired);
 
     return new NextResponse(
       JSON.stringify({
@@ -110,15 +110,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Rebuild the payment requirement for verification
+  // The accepted requirement is embedded in the payment payload (x402 v2)
+  const paymentRequirement = paymentPayload.accepted;
   const estimated = estimateCostUsdc(task, ratePerSec);
-  const amountOnChain = usdcToOnChainAmount(estimated);
-  const paymentRequirements = buildPaymentRequirementsResponse(
-    chainId,
-    amountOnChain,
-    "/api/inference"
-  );
-  const paymentRequirement = paymentRequirements.paymentRequirements[0];
 
   // Verify with facilitator (skip on local dev chain — facilitator doesn't support Anvil)
   if (!isLocalDevChain(chainId)) {
@@ -152,7 +146,7 @@ export async function POST(request: NextRequest) {
   } else {
     try {
       settlementResponse = await settleWithFacilitator(paymentPayload, paymentRequirement);
-      settlementTxHash = settlementResponse.transaction;
+      settlementTxHash = settlementResponse.transaction || undefined;
     } catch (settleErr) {
       const settleRaw = settleErr instanceof Error ? settleErr.message : "Settlement failed";
       console.error("[api/inference] Settlement error:", settleRaw);
@@ -172,6 +166,8 @@ export async function POST(request: NextRequest) {
     const rawOutput = await replicate.run(identifier, { input });
     const predictTimeMs = Date.now() - startTime;
     const output = normalizeOutput(rawOutput);
+    console.log("[api/inference] Raw output type:", typeof rawOutput, Array.isArray(rawOutput) ? `array[${rawOutput.length}]` : "");
+    console.log("[api/inference] Normalized output:", JSON.stringify(output)?.slice(0, 500));
     const actualCost = actualCostUsdc(predictTimeMs, ratePerSec);
     const actualCostStr = actualCost.toString();
 
@@ -197,6 +193,7 @@ export async function POST(request: NextRequest) {
     } else {
       // Media output — upload to R2
       const mediaUrls = extractMediaUrls(output);
+      console.log("[api/inference] Extracted media URLs:", mediaUrls);
       if (mediaUrls.length > 0) {
         const [record] = await db
           .insert(inferences)

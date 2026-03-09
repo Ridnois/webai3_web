@@ -90,9 +90,18 @@ const VALID_IMAGE_BODY = {
   input: { prompt: "A red cat" },
 };
 
-// Build a valid Payment-Signature header
+// Build a valid x402 v2 Payment-Signature header
 const VALID_PAYMENT_PAYLOAD = {
   x402Version: 2,
+  accepted: {
+    scheme: "exact",
+    network: "eip155:84532",
+    asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    amount: "10000",
+    payTo: "0x" + "ab".repeat(20),
+    maxTimeoutSeconds: 60,
+    extra: { name: "USD Coin", version: "2" },
+  },
   payload: {
     signature: "0x" + "ab".repeat(65),
     authorization: {
@@ -223,8 +232,9 @@ describe("POST /api/inference", () => {
       // Decode and check structure
       const decoded = JSON.parse(atob(paymentRequired!));
       expect(decoded.x402Version).toBe(2);
-      expect(decoded.paymentRequirements).toHaveLength(1);
-      expect(decoded.paymentRequirements[0].network).toBe("eip155:84532");
+      expect(decoded.accepts).toHaveLength(1);
+      expect(decoded.accepts[0].scheme).toBe("exact");
+      expect(decoded.accepts[0].network).toBe("eip155:84532");
     });
 
     it("includes Access-Control-Expose-Headers", async () => {

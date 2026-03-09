@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { toast } from "sonner";
+import { toastSuccess, toastError } from "@/lib/toast";
 import { useInferenceDetail } from "@/hooks/use-inference-detail";
 import { useShareInference } from "@/hooks/use-share-inference";
 import { useAuth } from "@/hooks/use-auth";
@@ -14,7 +14,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Shield, Share2, Globe, Lock, Copy, Check } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArrowLeft, Shield, Copy, Check, ExternalLink } from "lucide-react";
 
 export default function InferenceDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -73,10 +74,18 @@ export default function InferenceDetailPage() {
       { id: data.id, isPublic: !isPublic },
       {
         onSuccess: (result) => {
-          toast.success(result.isPublic ? "Shared to gallery" : "Removed from gallery");
+          toastSuccess(
+            result.isPublic ? "Shared to gallery" : "Removed from gallery",
+            result.isPublic
+              ? "Anyone with the link can now view this result."
+              : "This result is now private and hidden from the gallery."
+          );
         },
         onError: (err) => {
-          toast.error(err.message);
+          toastError("Sharing failed", {
+            description: err.message,
+            hint: "Check your connection and try again.",
+          });
         },
       }
     );
@@ -85,7 +94,7 @@ export default function InferenceDetailPage() {
   function handleCopyLink() {
     navigator.clipboard.writeText(publicUrl).then(() => {
       setLinkCopied(true);
-      toast.success("Link copied");
+      toastSuccess("Link copied", "Public permalink is ready to share.");
       setTimeout(() => setLinkCopied(false), 2000);
     });
   }
@@ -116,36 +125,36 @@ export default function InferenceDetailPage() {
               {new Date(data.createdAt).toLocaleString()}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {canShare && (
               <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleToggleShare}
-                  disabled={shareMutation.isPending}
-                >
-                  {isPublic ? (
-                    <>
-                      <Globe className="size-4" />
-                      Public
-                    </>
-                  ) : (
-                    <>
-                      <Lock className="size-4" />
-                      Private
-                    </>
-                  )}
-                </Button>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <Checkbox
+                    checked={isPublic}
+                    disabled={shareMutation.isPending}
+                    onCheckedChange={() => handleToggleShare()}
+                    aria-label="Share to public gallery"
+                  />
+                  <span className="text-sm text-muted-foreground select-none">
+                    Public
+                  </span>
+                </label>
                 {isPublic && (
-                  <Button variant="outline" size="sm" onClick={handleCopyLink}>
-                    {linkCopied ? (
-                      <Check className="size-4" />
-                    ) : (
-                      <Copy className="size-4" />
-                    )}
-                    {linkCopied ? "Copied" : "Copy Link"}
-                  </Button>
+                  <>
+                    <Button variant="outline" size="sm" onClick={handleCopyLink}>
+                      {linkCopied ? (
+                        <Check className="size-4" />
+                      ) : (
+                        <Copy className="size-4" />
+                      )}
+                      {linkCopied ? "Copied" : "Copy Link"}
+                    </Button>
+                    <Button variant="ghost" size="sm" asChild>
+                      <a href={publicUrl} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="size-4" />
+                      </a>
+                    </Button>
+                  </>
                 )}
               </>
             )}

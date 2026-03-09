@@ -6,22 +6,22 @@ import { getUsdcConfig } from "@/lib/contracts";
 
 export type PaymentStatus = "idle" | "signing" | "signed" | "error";
 
+// x402 v2 types
 interface PaymentRequirement {
+  scheme: string;
   network: string;
-  tokenAddress: string;
-  tokenDecimals: number;
-  receiverAddress: string;
-  amountRequired: string;
-  resource: string;
+  asset: string;
+  amount: string;
+  payTo: string;
+  maxTimeoutSeconds: number;
+  extra: Record<string, unknown>;
 }
 
-interface PaymentRequirementsResponse {
+interface PaymentRequiredResponse {
   x402Version: number;
-  paymentRequirements: PaymentRequirement[];
+  resource: { url: string };
+  accepts: PaymentRequirement[];
 }
-
-const EIP712_DOMAIN_NAME = "USD Coin";
-const EIP712_DOMAIN_VERSION = "2";
 
 const TRANSFER_WITH_AUTHORIZATION_TYPES = {
   TransferWithAuthorization: [
@@ -58,12 +58,12 @@ export function useX402Payment() {
         setError(null);
         setPaymentHeader(null);
 
-        // Decode the 402 response
-        const decoded: PaymentRequirementsResponse = JSON.parse(
+        // Decode the 402 response (x402 v2 format)
+        const decoded: PaymentRequiredResponse = JSON.parse(
           atob(paymentRequirementsBase64)
         );
-        const requirement = decoded.paymentRequirements[0];
-        if (!requirement) {
+        const accepted = decoded.accepts[0];
+        if (!accepted) {
           throw new Error("No payment requirements in 402 response");
         }
 
@@ -76,14 +76,19 @@ export function useX402Payment() {
           throw new Error(`No USDC config for chain ${chainId}`);
         }
 
+        // Read EIP-712 domain from the payment requirement's extra field
+        const domainName = (accepted.extra?.name as string) || "USD Coin";
+        const domainVersion = (accepted.extra?.version as string) || "2";
+
         const nonce = generateNonce();
-        const validAfter = "0";
-        const validBefore = String(Math.floor(Date.now() / 1000) + 3600); // 1 hour
+        const now = Math.floor(Date.now() / 1000);
+        const validAfter = (now - 600).toString(); // 10 min grace for clock skew
+        const validBefore = String(now + accepted.maxTimeoutSeconds);
 
         const signature = await signTypedDataAsync({
           domain: {
-            name: EIP712_DOMAIN_NAME,
-            version: EIP712_DOMAIN_VERSION,
+            name: domainName,
+            version: domainVersion,
             chainId: BigInt(chainId),
             verifyingContract: usdcConfig.address,
           },
@@ -91,23 +96,24 @@ export function useX402Payment() {
           primaryType: "TransferWithAuthorization",
           message: {
             from: address,
-            to: requirement.receiverAddress as `0x${string}`,
-            value: BigInt(requirement.amountRequired),
+            to: accepted.payTo as `0x${string}`,
+            value: BigInt(accepted.amount),
             validAfter: BigInt(validAfter),
             validBefore: BigInt(validBefore),
             nonce: nonce as `0x${string}`,
           },
         });
 
-        // Build PaymentPayload and base64-encode it
+        // Build x402 v2 PaymentPayload
         const paymentPayload = {
           x402Version: 2,
+          accepted,
           payload: {
             signature,
             authorization: {
               from: address,
-              to: requirement.receiverAddress,
-              value: requirement.amountRequired,
+              to: accepted.payTo,
+              value: accepted.amount,
               validAfter,
               validBefore,
               nonce,

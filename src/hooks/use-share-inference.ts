@@ -25,6 +25,7 @@ export function useShareInference() {
       toggleShare(id, isPublic),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["inference-detail", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["inference-history"] });
       queryClient.invalidateQueries({ queryKey: ["gallery"] });
     },
   });

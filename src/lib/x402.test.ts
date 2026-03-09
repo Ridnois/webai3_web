@@ -4,8 +4,8 @@ import {
   caip2ToChainId,
   encodePaymentHeader,
   decodePaymentHeader,
-  buildPaymentRequirementsResponse,
-  paymentRequirementsResponseSchema,
+  buildPaymentRequiredResponse,
+  paymentRequiredResponseSchema,
   paymentPayloadSchema,
   paymentRequirementSchema,
 } from "./x402";
@@ -51,17 +51,19 @@ describe("caip2ToChainId", () => {
 // ─── Header encoding / decoding ─────────────────────────────────────────────
 
 describe("encodePaymentHeader / decodePaymentHeader", () => {
-  it("round-trips a payment requirements response", () => {
+  it("round-trips a payment required response", () => {
     const original = {
       x402Version: 2,
-      paymentRequirements: [
+      resource: { url: "/api/inference" },
+      accepts: [
         {
+          scheme: "exact",
           network: "eip155:84532",
-          tokenAddress: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
-          tokenDecimals: 6,
-          receiverAddress: "0x" + "ab".repeat(20),
-          amountRequired: "10000",
-          resource: "/api/inference",
+          asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+          amount: "10000",
+          payTo: "0x" + "ab".repeat(20),
+          maxTimeoutSeconds: 60,
+          extra: { name: "USD Coin", version: "2" },
         },
       ],
     };
@@ -69,7 +71,7 @@ describe("encodePaymentHeader / decodePaymentHeader", () => {
     const encoded = encodePaymentHeader(original);
     expect(typeof encoded).toBe("string");
 
-    const decoded = decodePaymentHeader(encoded, paymentRequirementsResponseSchema);
+    const decoded = decodePaymentHeader(encoded, paymentRequiredResponseSchema);
     expect(decoded).toEqual(original);
   });
 
@@ -80,25 +82,26 @@ describe("encodePaymentHeader / decodePaymentHeader", () => {
   });
 });
 
-// ─── buildPaymentRequirementsResponse ───────────────────────────────────────
+// ─── buildPaymentRequiredResponse ───────────────────────────────────────────
 
-describe("buildPaymentRequirementsResponse", () => {
+describe("buildPaymentRequiredResponse", () => {
   it("builds a valid response for Base Sepolia", () => {
-    const result = buildPaymentRequirementsResponse(84532, 10000n, "/api/inference");
+    const result = buildPaymentRequiredResponse(84532, 10000n, "/api/inference");
 
     expect(result.x402Version).toBe(2);
-    expect(result.paymentRequirements).toHaveLength(1);
+    expect(result.accepts).toHaveLength(1);
 
-    const req = result.paymentRequirements[0];
+    const req = result.accepts[0];
+    expect(req.scheme).toBe("exact");
     expect(req.network).toBe("eip155:84532");
-    expect(req.tokenAddress).toBe("0x036CbD53842c5426634e7929541eC2318f3dCF7e");
-    expect(req.tokenDecimals).toBe(6);
-    expect(req.amountRequired).toBe("10000");
-    expect(req.resource).toBe("/api/inference");
+    expect(req.asset).toBe("0x036CbD53842c5426634e7929541eC2318f3dCF7e");
+    expect(req.amount).toBe("10000");
+    expect(req.payTo).toBe("0x" + "ab".repeat(20));
+    expect(req.maxTimeoutSeconds).toBe(60);
   });
 
   it("throws for unsupported chain", () => {
-    expect(() => buildPaymentRequirementsResponse(999999, 10000n, "/api/inference")).toThrow(
+    expect(() => buildPaymentRequiredResponse(999999, 10000n, "/api/inference")).toThrow(
       "Unsupported chain for x402"
     );
   });
@@ -107,9 +110,18 @@ describe("buildPaymentRequirementsResponse", () => {
 // ─── Schema validation ──────────────────────────────────────────────────────
 
 describe("paymentPayloadSchema", () => {
-  it("accepts a valid payment payload", () => {
+  it("accepts a valid v2 payment payload", () => {
     const payload = {
       x402Version: 2,
+      accepted: {
+        scheme: "exact",
+        network: "eip155:84532",
+        asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+        amount: "10000",
+        payTo: "0x" + "22".repeat(20),
+        maxTimeoutSeconds: 60,
+        extra: { name: "USD Coin", version: "2" },
+      },
       payload: {
         signature: "0x" + "ab".repeat(65),
         authorization: {
@@ -126,10 +138,11 @@ describe("paymentPayloadSchema", () => {
     expect(paymentPayloadSchema.safeParse(payload).success).toBe(true);
   });
 
-  it("rejects missing signature", () => {
+  it("rejects missing accepted field", () => {
     const payload = {
       x402Version: 2,
       payload: {
+        signature: "0x" + "ab".repeat(65),
         authorization: {
           from: "0x" + "11".repeat(20),
           to: "0x" + "22".repeat(20),

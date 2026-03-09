@@ -10,6 +10,7 @@ export interface InferenceHistoryItem {
   outputType: string;
   status: string;
   predictTimeMs: number | null;
+  isPublic: number;
   createdAt: string;
 }
 

@@ -31,7 +31,7 @@ function normalizeModels(models: ReplicateCollectionModel[]) {
       seen.add(key);
       return true;
     })
-    .slice(0, 20)
+    .slice(0, 50)
     .map((m) => ({
       owner: m.owner,
       name: m.name,

@@ -25,39 +25,40 @@ export function caip2ToChainId(caip2: string): number | undefined {
   return CHAIN_ID_MAP[caip2];
 }
 
-// ─── Zod schemas ────────────────────────────────────────────────────────────
+// ─── Zod schemas (x402 v2) ──────────────────────────────────────────────────
 
-export const paymentRequirementSchema = z.object({
+const paymentRequirementBaseSchema = z.object({
+  scheme: z.string(),
   network: z.string(),
-  tokenAddress: z.string(),
-  tokenDecimals: z.number(),
-  receiverAddress: z.string(),
-  amountRequired: z.string(),
-  resource: z.string(),
+  asset: z.string(),
+  amount: z.string(),
+  payTo: z.string(),
+  maxTimeoutSeconds: z.number(),
+  extra: z.record(z.unknown()).default({}),
 });
-export type PaymentRequirement = z.infer<typeof paymentRequirementSchema>;
+// Use output type so `extra` is always `Record<string, unknown>` (never undefined)
+export const paymentRequirementSchema = paymentRequirementBaseSchema;
+export type PaymentRequirement = z.output<typeof paymentRequirementBaseSchema>;
 
-export const paymentRequirementsResponseSchema = z.object({
-  x402Version: z.number(),
-  paymentRequirements: z.array(paymentRequirementSchema),
+export const resourceInfoSchema = z.object({
+  url: z.string(),
+  description: z.string().optional(),
+  mimeType: z.string().optional(),
 });
-export type PaymentRequirementsResponse = z.infer<typeof paymentRequirementsResponseSchema>;
+
+export const paymentRequiredResponseSchema = z.object({
+  x402Version: z.number(),
+  resource: resourceInfoSchema,
+  accepts: z.array(paymentRequirementSchema),
+});
+export type PaymentRequiredResponse = z.infer<typeof paymentRequiredResponseSchema>;
 
 export const paymentPayloadSchema = z.object({
   x402Version: z.number(),
-  payload: z.object({
-    signature: z.string(),
-    authorization: z.object({
-      from: z.string(),
-      to: z.string(),
-      value: z.string(),
-      validAfter: z.string(),
-      validBefore: z.string(),
-      nonce: z.string(),
-    }),
-  }),
+  accepted: paymentRequirementSchema,
+  payload: z.record(z.unknown()),
 });
-export type PaymentPayload = z.infer<typeof paymentPayloadSchema>;
+export type PaymentPayload = z.output<typeof paymentPayloadSchema>;
 
 export const settlementResponseSchema = z.object({
   success: z.boolean(),
@@ -73,21 +74,21 @@ export function encodePaymentHeader(data: unknown): string {
   return btoa(JSON.stringify(data));
 }
 
-export function decodePaymentHeader<T>(
+export function decodePaymentHeader<O, D extends z.ZodTypeDef, I>(
   base64: string,
-  schema: z.ZodType<T>
-): T {
+  schema: z.ZodType<O, D, I>
+): O {
   const json = JSON.parse(atob(base64));
   return schema.parse(json);
 }
 
 // ─── Build 402 PaymentRequirementsResponse ──────────────────────────────────
 
-export function buildPaymentRequirementsResponse(
+export function buildPaymentRequiredResponse(
   chainId: number,
   amountOnChain: bigint,
   resourceUrl: string
-): PaymentRequirementsResponse {
+): PaymentRequiredResponse {
   const network = chainIdToCaip2(chainId);
   if (!network) {
     throw new Error(`Unsupported chain for x402: ${chainId}`);
@@ -102,14 +103,20 @@ export function buildPaymentRequirementsResponse(
 
   return {
     x402Version: 2,
-    paymentRequirements: [
+    resource: { url: resourceUrl },
+    accepts: [
       {
+        scheme: "exact",
         network,
-        tokenAddress: usdcConfig.address,
-        tokenDecimals: usdcConfig.decimals,
-        receiverAddress: env.RECEIVER_ADDRESS,
-        amountRequired: amountOnChain.toString(),
-        resource: resourceUrl,
+        asset: usdcConfig.address,
+        amount: amountOnChain.toString(),
+        payTo: env.RECEIVER_ADDRESS,
+        maxTimeoutSeconds: 60,
+        extra: {
+          // EIP-712 domain for USDC's transferWithAuthorization (EIP-3009)
+          name: "USD Coin",
+          version: "2",
+        },
       },
     ],
   };
@@ -125,7 +132,7 @@ interface VerifyResponse {
 
 export async function verifyWithFacilitator(
   paymentPayload: PaymentPayload,
-  paymentRequirement: PaymentRequirement
+  paymentRequirements: PaymentRequirement
 ): Promise<VerifyResponse> {
   const env = getServerEnv();
   const res = await fetchWithTimeout(`${env.X402_FACILITATOR_URL}/verify`, {
@@ -134,7 +141,7 @@ export async function verifyWithFacilitator(
     body: JSON.stringify({
       x402Version: 2,
       paymentPayload,
-      paymentRequirements: paymentRequirement,
+      paymentRequirements,
     }),
     timeoutMs: 15_000,
   });
@@ -149,7 +156,7 @@ export async function verifyWithFacilitator(
 
 export async function settleWithFacilitator(
   paymentPayload: PaymentPayload,
-  paymentRequirement: PaymentRequirement
+  paymentRequirements: PaymentRequirement
 ): Promise<SettlementResponse> {
   const env = getServerEnv();
   const res = await fetchWithTimeout(`${env.X402_FACILITATOR_URL}/settle`, {
@@ -158,7 +165,7 @@ export async function settleWithFacilitator(
     body: JSON.stringify({
       x402Version: 2,
       paymentPayload,
-      paymentRequirements: paymentRequirement,
+      paymentRequirements,
     }),
     timeoutMs: 30_000,
   });

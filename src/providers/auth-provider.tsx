@@ -11,7 +11,7 @@ import {
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useAccount, useSignMessage } from "wagmi";
 import { SiweMessage } from "siwe";
-import { toast } from "sonner";
+import { toastSuccess, toastError, toastInfo } from "@/lib/toast";
 
 interface AuthSession {
   address: string | null;
@@ -128,26 +128,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       // Background refetch to get real isAdmin from session endpoint
       queryClient.invalidateQueries({ queryKey: ["auth-session"] });
-      toast.success("Signed in", {
-        description: `Connected as ${data.address.slice(0, 6)}...${data.address.slice(-4)}`,
-      });
+      toastSuccess(
+        "Signed in",
+        `Connected as ${data.address.slice(0, 6)}...${data.address.slice(-4)}`
+      );
     },
     onError: (error) => {
       const msg = error.message;
       // Parse the [Step] prefix for a descriptive title
       const match = msg.match(/^\[(\w+)]\s*(.+)$/);
+      const stepLabels: Record<string, string> = {
+        Nonce: "Nonce request failed",
+        Wallet: "Wallet signature failed",
+        Verify: "Verification failed",
+        Server: "Server error",
+      };
+      const stepHints: Record<string, string> = {
+        Nonce: "Check your network connection and try again.",
+        Wallet: "Open your wallet extension and approve the signature request.",
+        Verify: "Your session may have expired. Refresh the page and try again.",
+        Server: "Wait a moment and retry. If the problem persists, the service may be down.",
+      };
       if (match) {
-        const stepLabels: Record<string, string> = {
-          Nonce: "Nonce request failed",
-          Wallet: "Wallet signature failed",
-          Verify: "Verification failed",
-          Server: "Server error",
-        };
-        toast.error(stepLabels[match[1]] ?? "Sign-in failed", {
+        toastError(stepLabels[match[1]] ?? "Sign-in failed", {
           description: match[2],
+          hint: stepHints[match[1]],
         });
       } else {
-        toast.error("Sign-in failed", { description: msg });
+        toastError("Sign-in failed", { description: msg });
       }
     },
   });
@@ -167,8 +175,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
     onError: (error) => {
-      toast.error("Sign-out failed", {
+      toastError("Sign-out failed", {
         description: error.message,
+        hint: "Your session may still be active. Refresh the page to check.",
       });
     },
   });
@@ -219,9 +228,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     lastHandledMismatchRef.current = normalizedConnectedAddress ?? null;
     autoSignInAfterAccountChangeRef.current = true;
 
-    toast.info("Wallet account changed", {
-      description: "Detected a different wallet account. Please sign in again.",
-    });
+    toastInfo(
+      "Wallet account changed",
+      "Detected a different wallet account. Signing you in with the new address."
+    );
     signOut();
   }, [isConnected, normalizedConnectedAddress, normalizedSessionAddress, signOut]);
 

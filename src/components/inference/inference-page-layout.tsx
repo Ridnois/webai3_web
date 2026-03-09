@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import { toast } from "sonner";
 import { useAccount } from "wagmi";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,18 +17,18 @@ import { useAuth } from "@/hooks/use-auth";
 import { useCostEstimate } from "@/hooks/use-cost-estimate";
 import { useX402Payment } from "@/hooks/use-x402-payment";
 import { useWalletBalances } from "@/hooks/use-wallet-balances";
+import { useModelSchema } from "@/hooks/use-model-schema";
 import { TASK_CONFIGS } from "@/types/task-config";
 import type { TaskType, ReplicateModel } from "@/types/inference";
 import { toInferenceApiError } from "@/lib/inference-error";
 import { formatUsdc, usdcToOnChainAmount } from "@/lib/pricing";
+import { toastInferenceError, toastInsufficientFunds } from "@/lib/toast";
 import {
   ImagePlus,
+  Loader2,
   MessageSquareText,
   AudioLines,
   Sparkles,
-  AlertTriangle,
-  Copy,
-  Check,
 } from "lucide-react";
 
 const ICON_MAP: Record<string, typeof ImagePlus> = {
@@ -37,119 +36,6 @@ const ICON_MAP: Record<string, typeof ImagePlus> = {
   MessageSquareText,
   AudioLines,
 };
-
-function CopyErrorButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-
-  function handleCopy() {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }
-
-  return (
-    <button
-      onClick={handleCopy}
-      className="inline-flex items-center gap-1 rounded-md border border-border/70 bg-muted/40 px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-      title="Copy error details"
-    >
-      {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
-      {copied ? "Copied" : "Copy"}
-    </button>
-  );
-}
-
-function buildErrorClipboardText(
-  title: string,
-  description: string,
-  hint: string | undefined,
-  footer: string | null,
-): string {
-  const parts = [`${title}: ${description}`];
-  if (hint) parts.push(`Hint: ${hint}`);
-  if (footer) parts.push(footer);
-  return parts.join("\n");
-}
-
-function showInferenceFailureToast(error: Error, title: string) {
-  const parsed = toInferenceApiError(error);
-  const description = parsed?.message ?? error.message;
-  const hint = parsed?.hint;
-  const footer = parsed
-    ? [parsed.code, parsed.status ? `HTTP ${parsed.status}` : null]
-        .filter(Boolean)
-        .join(" • ")
-    : null;
-  const clipboardText = buildErrorClipboardText(title, description, hint ?? undefined, footer);
-
-  toast.custom(
-    () => (
-      <div className="w-[min(420px,calc(100vw-2rem))] rounded-xl border border-destructive/30 bg-card p-4 shadow-lg">
-        <div className="flex items-start gap-3">
-          <div className="rounded-md bg-destructive/10 p-2 text-destructive">
-            <AlertTriangle className="size-4" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-2">
-              <p className="text-sm font-semibold text-foreground">{title}</p>
-              <CopyErrorButton text={clipboardText} />
-            </div>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              {description}
-            </p>
-            {hint && (
-              <p className="mt-2 rounded-md border border-border/70 bg-muted/40 px-2 py-1.5 text-xs text-muted-foreground">
-                {hint}
-              </p>
-            )}
-            {footer && (
-              <p className="mt-2 font-[family-name:var(--font-geist-mono)] text-[11px] text-muted-foreground/85">
-                {footer}
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-    ),
-    { duration: 8000 }
-  );
-}
-
-function showInsufficientFundsToast(
-  estimatedCost: number,
-  usdcBalance: string | undefined
-) {
-  const description = `This inference requires ${formatUsdc(estimatedCost)}, but your wallet currently has ${usdcBalance !== undefined ? `$${usdcBalance}` : "an unknown amount"}.`;
-  const clipboardText = `Insufficient USDC balance: ${description}\nHint: Top up USDC on the selected network before retrying.`;
-
-  toast.custom(
-    () => (
-      <div className="w-[min(420px,calc(100vw-2rem))] rounded-xl border border-destructive/30 bg-card p-4 shadow-lg">
-        <div className="flex items-start gap-3">
-          <div className="rounded-md bg-destructive/10 p-2 text-destructive">
-            <AlertTriangle className="size-4" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-2">
-              <p className="text-sm font-semibold text-foreground">
-                Insufficient USDC balance
-              </p>
-              <CopyErrorButton text={clipboardText} />
-            </div>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              {description}
-            </p>
-            <p className="mt-2 rounded-md border border-border/70 bg-muted/40 px-2 py-1.5 text-xs text-muted-foreground">
-              Top up USDC on the selected network before retrying.
-            </p>
-          </div>
-        </div>
-      </div>
-    ),
-    { duration: 8000 }
-  );
-}
 
 interface InferencePageLayoutProps {
   task: TaskType;
@@ -159,21 +45,28 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
   const config = TASK_CONFIGS[task];
   const searchParams = useSearchParams();
 
+  const Icon = ICON_MAP[config.icon] ?? MessageSquareText;
+  const [selectedModel, setSelectedModel] = useState<ReplicateModel | null>(
+    null
+  );
+  const modelSchema = useModelSchema(selectedModel);
+  // Use dynamic schema fields when available, fall back to static config
+  const activeFields =
+    modelSchema.data && modelSchema.data.length > 0
+      ? modelSchema.data
+      : config.fields;
+
   // Read initial values from URL params (used by prompt templates)
   const initialValues = useMemo(() => {
     const vals: Record<string, string | number> = {};
-    for (const field of config.fields) {
+    for (const field of activeFields) {
       const param = searchParams.get(field.name);
       if (param !== null) {
         vals[field.name] = field.type === "number" ? Number(param) : param;
       }
     }
     return Object.keys(vals).length > 0 ? vals : undefined;
-  }, [searchParams, config.fields]);
-  const Icon = ICON_MAP[config.icon] ?? MessageSquareText;
-  const [selectedModel, setSelectedModel] = useState<ReplicateModel | null>(
-    null
-  );
+  }, [searchParams, activeFields]);
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [estimatedCostFromServer, setEstimatedCostFromServer] = useState<number | null>(null);
@@ -265,7 +158,7 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
         submitError.message.includes("401") ||
         submitError.message.toLowerCase().includes("unauthorized");
 
-      showInferenceFailureToast(
+      toastInferenceError(
         submitError,
         isAuth ? "Authentication required" : "Inference failed"
       );
@@ -276,7 +169,7 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
   useEffect(() => {
     if (requestError && requestError !== lastToastedErrorRef.current) {
       lastToastedErrorRef.current = requestError;
-      showInferenceFailureToast(requestError, "Request failed");
+      toastInferenceError(requestError, "Request failed");
     }
   }, [requestError]);
 
@@ -318,7 +211,7 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
     if (!selectedModel) return;
 
     if (insufficientFunds && estimatedCostUsdc != null) {
-      showInsufficientFundsToast(estimatedCostUsdc, usdcFormatted);
+      toastInsufficientFunds(formatUsdc(estimatedCostUsdc), usdcFormatted);
       return;
     }
 
@@ -346,7 +239,7 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
   function handlePaymentConfirm() {
     if (!paymentRequirementsRef.current) return;
     if (insufficientFunds && estimatedCostUsdc != null) {
-      showInsufficientFundsToast(estimatedCostUsdc, usdcFormatted);
+      toastInsufficientFunds(formatUsdc(estimatedCostUsdc), usdcFormatted);
       return;
     }
     x402Payment.signPayment(paymentRequirementsRef.current);
@@ -436,9 +329,16 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
               </CardTitle>
             </CardHeader>
             <CardContent>
+              {modelSchema.isLoading && selectedModel ? (
+                <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" />
+                  Loading model parameters…
+                </div>
+              ) : (
               <div className="flex flex-col gap-4">
                 <InferenceForm
-                  fields={config.fields}
+                  key={selectedModel ? `${selectedModel.owner}/${selectedModel.name}` : "none"}
+                  fields={activeFields}
                   selectedModel={selectedModel}
                   isLoading={isLoading}
                   isSubmitDisabled={insufficientFunds}
@@ -454,6 +354,7 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
                 />
                 <CostEstimate task={task} usdcBalance={usdcFormatted} />
               </div>
+              )}
             </CardContent>
           </Card>
         </div>

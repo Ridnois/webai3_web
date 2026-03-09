@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
       outputType: inferences.outputType,
       status: inferences.status,
       predictTimeMs: inferences.predictTimeMs,
+      isPublic: inferences.isPublic,
       createdAt: inferences.createdAt,
     })
     .from(inferences)
