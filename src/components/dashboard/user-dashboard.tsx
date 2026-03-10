@@ -166,7 +166,12 @@ export function UserDashboard() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <StatCard
+          title="Total Spent (USDC)"
+          value={`$${(summary?.totalSpentUsdc ?? 0).toFixed(4)}`}
+          description={`$${(summary?.totalEstimatedUsdc ?? 0).toFixed(4)} estimated`}
+        />
         <StatCard
           title="Total Inferences"
           value={summary?.totalInferences.toLocaleString() ?? "0"}

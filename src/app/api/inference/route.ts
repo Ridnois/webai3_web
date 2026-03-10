@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getReplicateClient } from "@/lib/replicate";
 import { inferenceRequestSchema } from "@/types/inference";
+import type { TaskType } from "@/types/inference";
+import { TASK_CONFIGS } from "@/types/task-config";
 import { requireAuth } from "@/lib/auth";
 import { getSession } from "@/lib/session";
 import { getDb } from "@/lib/db";
@@ -25,11 +27,62 @@ import {
   usdcToOnChainAmount,
 } from "@/lib/pricing";
 import { getServerEnv } from "@/lib/server-env";
-import { eq } from "drizzle-orm";
+import { eq, and, avg } from "drizzle-orm";
 import { foundry } from "viem/chains";
 
 const EXPOSE_HEADERS = "Payment-Required, Payment-Response";
 const isLocalDevChain = (id: number) => id === foundry.id;
+
+/** Look up historical avg predict time for a model (or task fallback), return estimated seconds. */
+async function historicalEstimateSeconds(
+  db: ReturnType<typeof getDb>,
+  model: string,
+  task: TaskType,
+): Promise<number> {
+  // Try model-specific average first
+  const [modelResult] = await db
+    .select({ avgMs: avg(inferences.predictTimeMs) })
+    .from(inferences)
+    .where(
+      and(
+        eq(inferences.model, model),
+        eq(inferences.status, "succeeded"),
+      ),
+    );
+
+  if (modelResult?.avgMs != null) {
+    return parseFloat(modelResult.avgMs) / 1000;
+  }
+
+  // Fall back to task-wide average
+  const [taskResult] = await db
+    .select({ avgMs: avg(inferences.predictTimeMs) })
+    .from(inferences)
+    .where(
+      and(
+        eq(inferences.taskType, task),
+        eq(inferences.status, "succeeded"),
+      ),
+    );
+
+  if (taskResult?.avgMs != null) {
+    return parseFloat(taskResult.avgMs) / 1000;
+  }
+
+  // Fall back to static default
+  return TASK_CONFIGS[task].estimatedSeconds;
+}
+
+/** Strip internal paths, stack traces, and tokens from error messages before sending to client. */
+function sanitizeErrorReason(raw: string): string {
+  // Remove file paths, stack traces, and anything after a newline
+  let cleaned = raw.split("\n")[0].trim();
+  // Strip common prefixes from Replicate errors
+  cleaned = cleaned.replace(/^(Prediction failed: |Error: )/, "");
+  // Cap length
+  if (cleaned.length > 300) cleaned = cleaned.slice(0, 300) + "…";
+  return cleaned;
+}
 
 export async function POST(request: NextRequest) {
   const auth = await requireAuth();
@@ -70,7 +123,9 @@ export async function POST(request: NextRequest) {
   // ─── Phase 1: No payment header → return 402 ───────────────────────────
 
   if (!paymentSignatureHeader) {
-    const estimated = estimateCostUsdc(task, ratePerSec);
+    const db = getDb();
+    const estSeconds = await historicalEstimateSeconds(db, model, task);
+    const estimated = estimateCostUsdc(task, ratePerSec, estSeconds);
     const amountOnChain = usdcToOnChainAmount(estimated);
 
     const paymentRequired = buildPaymentRequiredResponse(
@@ -227,7 +282,7 @@ export async function POST(request: NextRequest) {
             // DB update failed — don't mask the original error
           }
           return NextResponse.json(
-            { error: "Failed to process media output. Please try again.", code: "INFERENCE_ERROR" },
+            { error: "Failed to process media output. Please try again.", code: "INFERENCE_ERROR", reason: sanitizeErrorReason(uploadRaw) },
             { status: 502 }
           );
         }
@@ -325,7 +380,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: errorMessage, code: errorCode },
+      { error: errorMessage, code: errorCode, reason: sanitizeErrorReason(rawMessage) },
       { status: httpStatus }
     );
   }

@@ -79,7 +79,10 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
   const paymentRequirementsRef = useRef<string | null>(null);
   const { address, chainId } = useAccount();
   const { usdcFormatted, usdcRaw } = useWalletBalances(address, chainId);
-  const costEstimate = useCostEstimate(task);
+  const selectedModelId = selectedModel
+    ? `${selectedModel.owner}/${selectedModel.name}`
+    : undefined;
+  const costEstimate = useCostEstimate(task, selectedModelId);
   const x402Payment = useX402Payment();
   const estimatedCostUsdc =
     estimatedCostFromServer ?? costEstimate.data?.estimatedCostUsdc ?? null;
@@ -352,7 +355,7 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
                       : undefined
                   }
                 />
-                <CostEstimate task={task} usdcBalance={usdcFormatted} />
+                <CostEstimate task={task} model={selectedModelId} usdcBalance={usdcFormatted} />
               </div>
               )}
             </CardContent>

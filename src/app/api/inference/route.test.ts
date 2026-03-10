@@ -71,7 +71,7 @@ vi.mock("@/lib/x402", async (importOriginal) => {
   };
 });
 
-vi.mock("drizzle-orm", () => ({ eq: vi.fn() }));
+vi.mock("drizzle-orm", () => ({ eq: vi.fn(), and: vi.fn(), avg: vi.fn() }));
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

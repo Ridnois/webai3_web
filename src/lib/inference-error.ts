@@ -3,6 +3,7 @@ type InferencePhase = "request" | "submit";
 interface InferenceApiErrorBody {
   error?: unknown;
   code?: unknown;
+  reason?: unknown;
   details?: unknown;
 }
 
@@ -41,7 +42,8 @@ export class InferenceApiError extends Error {
 function inferHint(
   status: number,
   code: string | null,
-  message: string
+  message: string,
+  reason: string | null
 ): string | null {
   if (status === 401) {
     return "Your wallet session may have expired. Sign in again and retry.";
@@ -64,7 +66,7 @@ function inferHint(
   }
 
   if (status >= 500) {
-    return "Server-side failure. Wait a moment and retry.";
+    return reason ?? "Server-side failure. Wait a moment and retry.";
   }
 
   return null;
@@ -81,7 +83,8 @@ export async function parseInferenceApiError(
       ? body.error
       : `${fallbackMessage} (${res.status})`;
   const code = typeof body.code === "string" ? body.code : null;
-  const hint = inferHint(res.status, code, message);
+  const reason = typeof body.reason === "string" ? body.reason : null;
+  const hint = inferHint(res.status, code, message, reason);
 
   return new InferenceApiError({
     message,

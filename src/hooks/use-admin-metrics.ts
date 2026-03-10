@@ -9,6 +9,7 @@ interface ModelMetric {
   successCount: number;
   failedCount: number;
   avgResponseMs: number | null;
+  totalRevenueUsdc: number;
   lastUsed: string | null;
 }
 
@@ -18,6 +19,8 @@ interface MetricsSummary {
   uniqueUsers: number;
   avgResponseMs: number | null;
   totalTimeMs: number;
+  totalRevenueUsdc: number;
+  totalEstimatedUsdc: number;
 }
 
 export interface AdminMetricsResponse {

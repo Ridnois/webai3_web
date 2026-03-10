@@ -7,7 +7,10 @@ export interface InferenceHistoryItem {
   id: string;
   taskType: string;
   model: string;
+  input: Record<string, unknown>;
   outputType: string;
+  outputData: unknown;
+  mediaUrls: string[] | null;
   status: string;
   predictTimeMs: number | null;
   isPublic: number;

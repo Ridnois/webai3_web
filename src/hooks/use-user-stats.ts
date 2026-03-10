@@ -11,6 +11,8 @@ interface UserStatsSummary {
   avgResponseMs: number | null;
   modelsUsed: number;
   lastInference: string | null;
+  totalSpentUsdc: number;
+  totalEstimatedUsdc: number;
 }
 
 interface ModelBreakdown {

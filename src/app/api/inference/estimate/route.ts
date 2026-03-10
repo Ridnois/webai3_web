@@ -19,30 +19,59 @@ export async function GET(request: NextRequest) {
   }
 
   const task = parsed.data;
+  const model = request.nextUrl.searchParams.get("model");
   const env = getServerEnv();
   const ratePerSec = parseFloat(env.INFERENCE_RATE_PER_SEC);
 
-  // Query historical average predict time for succeeded inferences of this task
   const db = getDb();
-  const [result] = await db
-    .select({ avgMs: avg(inferences.predictTimeMs) })
-    .from(inferences)
-    .where(
-      and(
-        eq(inferences.taskType, task),
-        eq(inferences.status, "succeeded"),
-      ),
-    );
 
-  const avgMs = result?.avgMs != null ? parseFloat(result.avgMs) : null;
+  // Try model-specific average first (if model provided)
+  let avgMs: number | null = null;
+  let source: "model" | "historical" | "default" = "default";
+
+  if (model) {
+    const [modelResult] = await db
+      .select({ avgMs: avg(inferences.predictTimeMs) })
+      .from(inferences)
+      .where(
+        and(
+          eq(inferences.model, model),
+          eq(inferences.status, "succeeded"),
+        ),
+      );
+
+    if (modelResult?.avgMs != null) {
+      avgMs = parseFloat(modelResult.avgMs);
+      source = "model";
+    }
+  }
+
+  // Fall back to task-wide average
+  if (avgMs == null) {
+    const [taskResult] = await db
+      .select({ avgMs: avg(inferences.predictTimeMs) })
+      .from(inferences)
+      .where(
+        and(
+          eq(inferences.taskType, task),
+          eq(inferences.status, "succeeded"),
+        ),
+      );
+
+    if (taskResult?.avgMs != null) {
+      avgMs = parseFloat(taskResult.avgMs);
+      source = "historical";
+    }
+  }
+
   const fallbackSeconds = TASK_CONFIGS[task].estimatedSeconds;
   const estimatedSeconds = avgMs ? avgMs / 1000 : fallbackSeconds;
-  const source = avgMs ? "historical" : "default";
 
   const cost = estimateCostUsdc(task, ratePerSec, estimatedSeconds);
 
   return NextResponse.json({
     task,
+    model: model ?? null,
     estimatedCostUsdc: cost,
     ratePerSec,
     estimatedSeconds,

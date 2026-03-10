@@ -27,6 +27,8 @@ export async function GET() {
       ),
       modelsUsed: countDistinct(inferences.model),
       lastInference: max(inferences.createdAt),
+      totalSpentUsdc: sum(inferences.actualCostUsdc),
+      totalEstimatedUsdc: sum(inferences.estimatedCostUsdc),
     })
     .from(inferences)
     .where(userFilter);
@@ -71,6 +73,8 @@ export async function GET() {
         : null,
       modelsUsed: summary.modelsUsed,
       lastInference: summary.lastInference,
+      totalSpentUsdc: summary.totalSpentUsdc ? Number(summary.totalSpentUsdc) : 0,
+      totalEstimatedUsdc: summary.totalEstimatedUsdc ? Number(summary.totalEstimatedUsdc) : 0,
     },
     byModel: byModel.map((m) => ({
       ...m,

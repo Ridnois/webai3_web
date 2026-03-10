@@ -26,55 +26,100 @@ Web3-enabled AI inference platform. Users authenticate via wallet (SIWE), then p
 
 ```
 src/
-├── app/                    # Next.js App Router
-│   ├── layout.tsx          # Root layout — wraps with Web3Provider
-│   ├── page.tsx            # Landing page (Server Component)
-│   ├── api/                # Route Handlers (server-only)
-│   │   ├── auth/           # nonce, verify, session, logout
-│   │   ├── inference/      # POST — run a model (x402 payment)
-│   │   ├── inferences/     # GET list, GET/PATCH [id]
-│   │   ├── models/         # GET available models from Replicate
-│   │   ├── gallery/        # GET public gallery (paginated)
-│   │   ├── r/[id]/         # GET public permalink
-│   │   ├── stats/          # GET platform stats
-│   │   ├── user/stats/     # GET per-user stats
-│   │   └── admin/metrics/  # GET admin metrics
-│   ├── inference/          # Inference UI pages
-│   │   ├── page.tsx        # Task selector
+├── app/                        # Next.js App Router
+│   ├── layout.tsx              # Root layout — wraps with Web3Provider + AuthProvider
+│   ├── page.tsx                # Landing page (Server Component)
+│   ├── middleware.ts           # Request/response middleware
+│   ├── api/                    # Route Handlers (server-only)
+│   │   ├── auth/               # nonce, verify, session, logout
+│   │   ├── inference/
+│   │   │   ├── route.ts        # POST — run a model (x402 payment)
+│   │   │   └── estimate/       # POST — estimate cost before payment
+│   │   ├── inferences/         # GET list, GET/PATCH [id]
+│   │   ├── models/
+│   │   │   ├── route.ts        # GET available models from Replicate
+│   │   │   └── schema/         # GET input schema for a model
+│   │   ├── gallery/            # GET public gallery (paginated)
+│   │   ├── r/[id]/             # GET public permalink
+│   │   ├── stats/              # GET platform stats
+│   │   ├── user/stats/         # GET per-user stats
+│   │   └── admin/metrics/      # GET admin metrics
+│   ├── inference/              # Inference UI pages
+│   │   ├── page.tsx            # Task selector
 │   │   ├── text-to-image/
 │   │   ├── text-to-text/
 │   │   └── text-to-sound/
-│   ├── gallery/            # Public gallery browser
-│   ├── templates/          # Prompt templates browser
-│   ├── r/[id]/             # Public permalink page (OG metadata)
-│   ├── dashboard/          # User dashboard
-│   ├── admin/              # Admin dashboard
-│   └── history/            # User history pages + [id] detail
+│   ├── gallery/                # Public gallery browser
+│   ├── templates/              # Prompt templates browser
+│   ├── r/[id]/                 # Public permalink page (OG metadata)
+│   ├── dashboard/              # User dashboard
+│   ├── admin/                  # Admin dashboard
+│   └── history/                # User history pages + [id] detail
 ├── components/
-│   ├── ui/                 # shadcn/ui primitives (do not edit manually)
-│   ├── layout/             # site-header (with mobile menu), site-footer
-│   ├── auth/               # sign-in-button
-│   ├── wallet/             # wallet-button, wallet-details, connect-dialog
-│   ├── inference/          # inference-form, result, loading, model-selector
-│   ├── gallery/            # gallery-grid, public-result-view
-│   ├── templates/          # template-grid
-│   ├── history/            # inference-history, inference-history-card
-│   └── sections/           # Landing page: hero, showcase, how-it-works,
-│                           # features, pricing, templates, cta
-├── hooks/                  # Custom React hooks (data + side-effects only)
-├── lib/                    # Pure utilities, SDK clients, config
-│   ├── db/                 # Drizzle instance + schema
-│   ├── x402.ts             # x402 payment protocol helpers
-│   ├── pricing.ts          # Cost estimation + USDC conversion
-│   ├── templates.ts        # 16 curated prompt template definitions
-│   ├── r2.ts               # R2 upload + public URL helpers
-│   ├── wagmi.ts            # Wagmi config (Base + Base Sepolia + Anvil)
-│   ├── contracts.ts        # USDC contract addresses/ABIs
-│   ├── session.ts          # iron-session config
-│   ├── env.ts              # Client env validation (Zod)
-│   └── server-env.ts       # Server env validation (Zod)
-├── providers/              # React context providers
-└── types/                  # Shared TypeScript types + Zod schemas
+│   ├── ui/                     # shadcn/ui primitives (do not edit manually)
+│   ├── layout/                 # site-header (with mobile menu), site-footer
+│   ├── auth/                   # sign-in-button
+│   ├── wallet/                 # wallet-button, wallet-details, connect-dialog
+│   ├── inference/              # inference-form, result, loading, model-selector,
+│   │                           # cost-estimate, payment-confirm-dialog,
+│   │                           # text-result, image-result, audio-result
+│   ├── gallery/                # gallery-grid, public-result-view
+│   ├── templates/              # template-grid
+│   ├── history/                # inference-history, inference-history-card
+│   ├── admin/                  # admin-dashboard
+│   ├── dashboard/              # user-dashboard
+│   ├── sections/               # Landing page: hero, showcase, how-it-works,
+│   │                           # features, pricing, templates, stats, cta
+│   ├── feature-card.tsx        # Reusable card components
+│   ├── section-heading.tsx
+│   ├── stat-item.tsx
+│   ├── step-card.tsx
+│   ├── logo.tsx
+│   └── nav-link.tsx
+├── hooks/                      # Custom React hooks (data + side-effects only)
+│   ├── use-auth.ts             # Current user session
+│   ├── use-inference.ts        # Run inference (POST /api/inference)
+│   ├── use-inference-history.ts
+│   ├── use-inference-detail.ts
+│   ├── use-models.ts           # Available models from Replicate
+│   ├── use-model-schema.ts     # Input schema for a model
+│   ├── use-cost-estimate.ts    # Estimate cost before payment
+│   ├── use-gallery.ts          # Public gallery
+│   ├── use-share-inference.ts  # Share/unshare publicly
+│   ├── use-wallet-balances.ts  # USDC balance + gas estimate
+│   ├── use-x402-payment.ts     # Prepare x402 payment signature
+│   ├── use-admin-metrics.ts
+│   ├── use-platform-stats.ts
+│   └── use-user-stats.ts
+├── lib/                        # Pure utilities, SDK clients, config
+│   ├── db/
+│   │   ├── index.ts            # Drizzle ORM instance
+│   │   └── schema.ts           # Database schema (users, inferences)
+│   ├── env.ts                  # Client env validation (Zod, NEXT_PUBLIC_* only)
+│   ├── server-env.ts           # Server env validation (Zod)
+│   ├── auth.ts                 # SIWE authentication utilities
+│   ├── session.ts              # iron-session config
+│   ├── x402.ts                 # x402 payment protocol helpers
+│   ├── pricing.ts              # Cost estimation + USDC conversion
+│   ├── contracts.ts            # USDC contract addresses/ABIs
+│   ├── wagmi.ts                # Wagmi config (Base + Base Sepolia + Anvil)
+│   ├── replicate.ts            # Replicate API client singleton
+│   ├── r2.ts                   # R2 upload + public URL helpers
+│   ├── rate-limit.ts           # Rate limiting utilities
+│   ├── templates.ts            # 16 curated prompt template definitions
+│   ├── inference-utils.ts      # Inference utility functions
+│   ├── inference-error.ts      # Custom error classes for inference pipeline
+│   ├── model-discovery.ts      # Model caching + discovery logic
+│   ├── fetch-with-timeout.ts   # Fetch wrapper with timeout
+│   ├── admin.ts                # Admin utilities
+│   ├── toast.tsx               # Toast notification component
+│   └── utils.ts                # cn() helper only
+├── providers/
+│   ├── web3-provider.tsx       # Wagmi provider setup
+│   └── auth-provider.tsx       # Authentication context provider
+└── types/
+    ├── inference.ts            # Inference Zod schemas + types
+    └── task-config.ts          # Task configuration (TASK_CONFIGS map)
 ```
 
 ---
@@ -175,6 +220,7 @@ Pure functions and SDK singleton instances. No React, no hooks.
 - shadcn/ui components in `src/components/ui/` are generated by the CLI (`pnpm dlx shadcn add <component>`). Do not hand-edit them — regenerate instead.
 - Feature components are colocated by domain under `src/components/{domain}/`.
 - Landing page visual sections go in `src/components/sections/`.
+- Reusable atomic components (feature-card, section-heading, stat-item, step-card, logo, nav-link) live at `src/components/` root.
 - Props interfaces should be defined in the same file as the component (unless shared).
 
 ### Naming
@@ -204,6 +250,12 @@ Pure functions and SDK singleton instances. No React, no hooks.
 
 - **`users`** — `address` (PK), `created_at`, `last_seen_at`
 - **`inferences`** — `id` (UUID PK), `user_address` (FK), `task_type`, `model`, `input`, `output_type`, `output_data`, `r2_keys`, `status`, `error_message`, `predict_time_ms`, `estimated_cost_usdc`, `actual_cost_usdc`, `payment_tx_hash` (unique), `payment_chain_id`, `is_public` (0/1), `created_at`
+
+### Enums
+
+- `task_type`: `text-to-image`, `text-to-text`, `text-to-sound`
+- `output_type`: `text`, `image`, `audio`
+- `inference_status`: `pending`, `succeeded`, `failed`
 
 ### Query Patterns
 
@@ -247,6 +299,9 @@ Do not add new networks without updating `src/lib/wagmi.ts` and `src/lib/contrac
 ## Inference & Payment Pipeline
 
 ```
+Client → POST /api/inference/estimate
+         └─ Server returns cost estimate (no payment needed)
+
 Client → POST /api/inference (no Payment-Signature header)
          └─ Server returns 402 + Payment-Required header (estimated cost)
 
@@ -296,7 +351,7 @@ R2_BUCKET_NAME
 R2_PUBLIC_URL           # required — public URL for the R2 bucket
 RECEIVER_ADDRESS        # Ethereum address receiving USDC payments
 INFERENCE_RATE_PER_SEC  # optional, default 0.001
-X402_FACILITATOR_URL    # optional, default testnet
+X402_FACILITATOR_URL    # optional, default https://www.x402.org/facilitator
 ADMIN_ADDRESSES         # optional, comma-separated admin wallets
 ```
 Validated in `src/lib/server-env.ts`. Startup will throw if any required vars are missing.
@@ -315,9 +370,21 @@ pnpm test:watch    # watch mode (development)
 
 **Test file location:** colocate with the module under test.
 ```
-src/hooks/use-auth.ts
-src/hooks/use-auth.test.ts   ← colocated
+src/lib/x402.ts
+src/lib/x402.test.ts                    ← colocated
+src/app/api/inference/route.ts
+src/app/api/inference/route.test.ts     ← colocated
 ```
+
+**Current test files (8):**
+- `src/app/api/inference/route.test.ts` — inference endpoint integration
+- `src/app/api/models/route.test.ts` — models endpoint integration
+- `src/lib/inference-error.test.ts` — error class handling
+- `src/lib/inference-utils.test.ts` — utility functions
+- `src/lib/model-discovery.test.ts` — model caching + discovery
+- `src/lib/x402.test.ts` — x402 payment protocol
+- `src/types/inference.test.ts` — Zod schema validation
+- `src/types/task-config.test.ts` — task config validation
 
 **What to test:**
 
@@ -337,15 +404,6 @@ src/hooks/use-auth.test.ts   ← colocated
 - Do not mock internal pure functions — test them directly.
 - `getPublicUrls` is synchronous — use `mockReturnValue`, not `mockResolvedValue`.
 
-**Test structure:**
-```ts
-describe("useInference", () => {
-  it("calls POST /api/inference with correct payload", async () => { ... });
-  it("returns error state when API returns 401", async () => { ... });
-  it("invalidates inference history cache on success", async () => { ... });
-});
-```
-
 ---
 
 ## Common Commands
@@ -355,6 +413,7 @@ pnpm dev              # start dev server (localhost:3000)
 pnpm build            # production build
 pnpm lint             # ESLint check
 pnpm test             # run all tests
+pnpm test:watch       # watch mode
 pnpm db:generate      # generate DB migration from schema changes
 pnpm db:migrate       # apply pending migrations
 pnpm db:push          # push schema directly (dev only)

@@ -6,11 +6,12 @@ import type { TaskType } from "@/types/inference";
 
 interface CostEstimateProps {
   task: TaskType;
+  model?: string;
   usdcBalance: string | undefined;
 }
 
-export function CostEstimate({ task, usdcBalance }: CostEstimateProps) {
-  const { data, isLoading } = useCostEstimate(task);
+export function CostEstimate({ task, model, usdcBalance }: CostEstimateProps) {
+  const { data, isLoading } = useCostEstimate(task, model);
 
   if (isLoading || !data) {
     return (

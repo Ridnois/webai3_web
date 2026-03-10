@@ -142,10 +142,19 @@ export function AdminDashboard() {
   return (
     <div className="space-y-8">
       {/* Summary cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <StatCard
+          title="Total Revenue (USDC)"
+          value={`$${summary.totalRevenueUsdc.toFixed(4)}`}
+          description={`$${summary.totalEstimatedUsdc.toFixed(4)} estimated`}
+        />
         <StatCard
           title="Total Inferences"
           value={summary.totalInferences.toLocaleString()}
+        />
+        <StatCard
+          title="Unique Users"
+          value={summary.uniqueUsers}
         />
         <StatCard
           title="Total Inference Time"
@@ -155,10 +164,6 @@ export function AdminDashboard() {
         <StatCard
           title="Unique Models"
           value={summary.uniqueModels}
-        />
-        <StatCard
-          title="Unique Users"
-          value={summary.uniqueUsers}
         />
         <StatCard
           title="Avg Response Time"
@@ -195,6 +200,9 @@ export function AdminDashboard() {
                     </th>
                     <th className="pb-3 pr-4 font-medium text-right">
                       Avg Response
+                    </th>
+                    <th className="pb-3 pr-4 font-medium text-right">
+                      Revenue (USDC)
                     </th>
                     <th className="pb-3 font-medium text-right">Last Used</th>
                   </tr>
@@ -238,6 +246,9 @@ export function AdminDashboard() {
                           {m.avgResponseMs != null
                             ? `${m.avgResponseMs.toLocaleString()} ms`
                             : "N/A"}
+                        </td>
+                        <td className="py-3 pr-4 text-right font-mono text-xs">
+                          ${m.totalRevenueUsdc.toFixed(4)}
                         </td>
                         <td className="py-3 text-right text-muted-foreground">
                           {m.lastUsed

@@ -24,6 +24,7 @@ export async function GET() {
       avgResponseMs: avg(
         sql`CASE WHEN ${inferences.status} = 'succeeded' THEN ${inferences.predictTimeMs} END`
       ),
+      totalRevenueUsdc: sum(inferences.actualCostUsdc),
       lastUsed: max(inferences.createdAt),
     })
     .from(inferences)
@@ -40,6 +41,8 @@ export async function GET() {
         sql`CASE WHEN ${inferences.status} = 'succeeded' THEN ${inferences.predictTimeMs} END`
       ),
       totalTimeMs: sum(inferences.predictTimeMs),
+      totalRevenueUsdc: sum(inferences.actualCostUsdc),
+      totalEstimatedUsdc: sum(inferences.estimatedCostUsdc),
     })
     .from(inferences);
 
@@ -47,6 +50,7 @@ export async function GET() {
     models: modelMetrics.map((m) => ({
       ...m,
       avgResponseMs: m.avgResponseMs ? Math.round(Number(m.avgResponseMs)) : null,
+      totalRevenueUsdc: m.totalRevenueUsdc ? Number(m.totalRevenueUsdc) : 0,
     })),
     summary: {
       ...summary,
@@ -54,6 +58,8 @@ export async function GET() {
         ? Math.round(Number(summary.avgResponseMs))
         : null,
       totalTimeMs: summary.totalTimeMs ? Number(summary.totalTimeMs) : 0,
+      totalRevenueUsdc: summary.totalRevenueUsdc ? Number(summary.totalRevenueUsdc) : 0,
+      totalEstimatedUsdc: summary.totalEstimatedUsdc ? Number(summary.totalEstimatedUsdc) : 0,
     },
   });
 }

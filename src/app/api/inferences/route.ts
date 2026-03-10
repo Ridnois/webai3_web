@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { inferences } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
+import { getPublicUrls } from "@/lib/r2";
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth();
@@ -20,7 +21,10 @@ export async function GET(request: NextRequest) {
       id: inferences.id,
       taskType: inferences.taskType,
       model: inferences.model,
+      input: inferences.input,
       outputType: inferences.outputType,
+      outputData: inferences.outputData,
+      r2Keys: inferences.r2Keys,
       status: inferences.status,
       predictTimeMs: inferences.predictTimeMs,
       isPublic: inferences.isPublic,
@@ -32,5 +36,16 @@ export async function GET(request: NextRequest) {
     .limit(limit)
     .offset(offset);
 
-  return NextResponse.json({ items: rows, page, limit });
+  const items = rows.map((row) => {
+    const r2Keys = Array.isArray(row.r2Keys)
+      ? row.r2Keys.filter((k): k is string => typeof k === "string" && k.length > 0)
+      : [];
+
+    return {
+      ...row,
+      mediaUrls: r2Keys.length > 0 ? getPublicUrls(r2Keys) : null,
+    };
+  });
+
+  return NextResponse.json({ items, page, limit });
 }
