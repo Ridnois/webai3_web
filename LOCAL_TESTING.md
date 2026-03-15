@@ -16,13 +16,13 @@ curl -L https://foundry.paradigm.xyz | bash && foundryup
 ### 1. Copy the local dev environment template
 
 ```bash
-cp .env.local.example .env.local
+cp .env.example .env
 ```
 
-This sets:
+Set these values in `.env`:
 
 - `NEXT_PUBLIC_ENABLE_DEV_CHAIN=true` — adds the Foundry chain (chainId 31337) to the wallet connector
-- `RECEIVER_ADDRESS` / `NEXT_PUBLIC_RECEIVER_ADDRESS` — set to Anvil Account #1, which collects payments
+- `RECEIVER_ADDRESS` — set to Anvil Account #1, which collects payments
 
 ### 2. Start Anvil
 

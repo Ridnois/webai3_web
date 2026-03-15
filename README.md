@@ -214,7 +214,7 @@ pnpm install
 Copy the example and fill in your values:
 
 ```bash
-cp .env.example .env.local
+cp .env.example .env
 ```
 
 Required server-side variables:
@@ -273,7 +273,7 @@ pnpm chain:start   # Start Anvil fork of Base Sepolia
 pnpm chain:fund    # Fund test wallets with USDC
 ```
 
-Set `NEXT_PUBLIC_ENABLE_DEV_CHAIN=true` in `.env.local` to enable the local chain in the UI. Note: the x402 facilitator does not support local Anvil chains — payment settlement is mocked with random transaction hashes. Use Base Sepolia for testing real payments end-to-end.
+Set `NEXT_PUBLIC_ENABLE_DEV_CHAIN=true` in `.env` to enable the local chain in the UI. Note: the x402 facilitator does not support local Anvil chains — payment settlement is mocked with random transaction hashes. Use Base Sepolia for testing real payments end-to-end.
 
 ---
 
