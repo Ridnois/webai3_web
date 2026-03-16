@@ -4,7 +4,7 @@ import { TASK_CONFIGS } from "@/types/task-config";
 import type { TaskType } from "@/types/inference";
 
 export const metadata: Metadata = {
-  title: "AI Inference — web3-ai",
+  title: "AI Inference — WEBAI3",
   description:
     "Choose an AI task: text-to-image, text-to-text, or text-to-sound. Pay per inference with USDC micropayments.",
 };

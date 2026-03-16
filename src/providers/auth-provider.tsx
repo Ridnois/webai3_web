@@ -77,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const message = new SiweMessage({
         domain: window.location.host,
         address,
-        statement: "Sign in to web3-ai",
+        statement: "Sign in to WEBAI3",
         uri: window.location.origin,
         version: "1",
         chainId,

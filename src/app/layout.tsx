@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "web3-ai — Pay-Per-Use AI Inference",
+  title: "WEBAI3 — Pay-Per-Use AI Inference",
   description:
     "Wallet-authenticated AI inference with x402 micropayments and USDC settlement on Base. Pay per run, with on-chain receipts.",
 };

@@ -13,7 +13,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
     const res = await fetch(`${baseUrl}/api/r/${id}`, { cache: "no-store" });
     if (!res.ok) {
-      return { title: "Not Found — web3-ai" };
+      return { title: "Not Found — WEBAI3" };
     }
 
     const data = await res.json();
@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         ? data.input.prompt.slice(0, 160)
         : "AI-generated content";
 
-    const title = `${data.taskType === "text-to-image" ? "Image" : data.taskType === "text-to-sound" ? "Audio" : "Text"} by ${data.userAddress.slice(0, 6)}...${data.userAddress.slice(-4)} — web3-ai`;
+    const title = `${data.taskType === "text-to-image" ? "Image" : data.taskType === "text-to-sound" ? "Audio" : "Text"} by ${data.userAddress.slice(0, 6)}...${data.userAddress.slice(-4)} — WEBAI3`;
 
     const meta: Metadata = {
       title,
@@ -41,7 +41,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
     return meta;
   } catch {
-    return { title: "Shared Creation — web3-ai" };
+    return { title: "Shared Creation — WEBAI3" };
   }
 }
 

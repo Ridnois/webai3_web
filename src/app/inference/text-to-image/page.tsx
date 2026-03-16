@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { InferencePageLayout } from "@/components/inference/inference-page-layout";
 
 export const metadata: Metadata = {
-  title: "Text to Image — web3-ai",
+  title: "Text to Image — WEBAI3",
   description:
     "Generate images from text prompts using AI diffusion models.",
 };

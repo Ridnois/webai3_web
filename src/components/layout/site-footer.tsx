@@ -80,7 +80,7 @@ export function SiteFooter() {
         </div>
         <Separator className="my-8" />
         <p className="text-center text-sm text-muted-foreground">
-          &copy; {year} web3-ai. All rights reserved.
+          &copy; {year} WEBAI3. All rights reserved.
         </p>
       </div>
     </footer>
