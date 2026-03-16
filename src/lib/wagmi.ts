@@ -1,18 +1,18 @@
 import { createConfig, http } from "wagmi";
-import { base, baseSepolia, foundry } from "viem/chains";
+import { mainnet, sepolia, foundry } from "viem/chains";
 import type { Chain, Transport } from "viem";
 
 const enableDevChain = process.env.NEXT_PUBLIC_ENABLE_DEV_CHAIN === "true";
 
 export const chains: readonly [Chain, ...Chain[]] = enableDevChain
-  ? [foundry, base, baseSepolia]
-  : [base, baseSepolia];
+  ? [foundry, mainnet, sepolia]
+  : [mainnet, sepolia];
 
 export const defaultChain = chains[0];
 
 const transports: Record<number, Transport> = {
-  [base.id]: http(),
-  [baseSepolia.id]: http(),
+  [mainnet.id]: http(process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL || undefined),
+  [sepolia.id]: http(process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || undefined),
 };
 
 if (enableDevChain) {

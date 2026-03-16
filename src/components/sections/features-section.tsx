@@ -34,7 +34,7 @@ const features = [
     icon: ShieldCheck,
     title: "On-Chain Settlement",
     description:
-      "Every payment is verified and settled on Base before your inference runs. Transparent, auditable, and trustless via x402.",
+      "Every payment is verified and settled on Ethereum before your inference runs. Transparent, auditable, and trustless via x402.",
   },
   {
     icon: Share2,
@@ -56,9 +56,9 @@ const features = [
   },
   {
     icon: Zap,
-    title: "Built on Base",
+    title: "Ethereum Native",
     description:
-      "Base mainnet + Base Sepolia support with optional local Anvil mode for development and integration testing.",
+      "Ethereum mainnet + Sepolia support with optional local Anvil mode for development and integration testing.",
   },
 ];
 

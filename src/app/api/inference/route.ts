@@ -114,9 +114,9 @@ export async function POST(request: NextRequest) {
   const env = getServerEnv();
   const ratePerSec = parseFloat(env.INFERENCE_RATE_PER_SEC);
 
-  // Determine chain from session, default to Base Sepolia
+  // Determine chain from session, default to Ethereum Sepolia
   const session = await getSession();
-  const chainId = session.chainId ?? 84532;
+  const chainId = session.chainId ?? 11155111;
 
   const paymentSignatureHeader = request.headers.get("Payment-Signature");
 

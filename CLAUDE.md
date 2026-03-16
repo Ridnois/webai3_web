@@ -102,7 +102,7 @@ src/
 │   ├── x402.ts                 # x402 payment protocol helpers
 │   ├── pricing.ts              # Cost estimation + USDC conversion
 │   ├── contracts.ts            # USDC contract addresses/ABIs
-│   ├── wagmi.ts                # Wagmi config (Base + Base Sepolia + Anvil)
+│   ├── wagmi.ts                # Wagmi config (Ethereum mainnet + Sepolia + Anvil)
 │   ├── replicate.ts            # Replicate API client singleton
 │   ├── r2.ts                   # R2 upload + public URL helpers
 │   ├── rate-limit.ts           # Rate limiting utilities
@@ -282,6 +282,8 @@ POST /api/auth/logout  → destroy session
 
 ### Supported Networks
 
+- **Ethereum Mainnet** (chainId: 1)
+- **Ethereum Sepolia** (chainId: 11155111)
 - **Base Mainnet** (chainId: 8453)
 - **Base Sepolia** (chainId: 84532)
 - **Anvil** (chainId: 31337, local dev only — payment settlement is mocked)
@@ -290,8 +292,8 @@ Do not add new networks without updating `src/lib/wagmi.ts` and `src/lib/contrac
 
 ### USDC Contracts
 
-- Base Mainnet: `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`
-- Base Sepolia: `0x036CbD53842c5426634e7929541eC2318f3dCF7e`
+- Ethereum Mainnet: `0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48`
+- Ethereum Sepolia: `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238`
 - Decimals: 6
 
 ---
@@ -333,6 +335,8 @@ Client → POST /api/inference (with Payment-Signature header)
 
 ### Client (NEXT_PUBLIC_*)
 ```
+NEXT_PUBLIC_ETHEREUM_RPC_URL
+NEXT_PUBLIC_SEPOLIA_RPC_URL
 NEXT_PUBLIC_BASE_RPC_URL
 NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL
 NEXT_PUBLIC_ENABLE_DEV_CHAIN

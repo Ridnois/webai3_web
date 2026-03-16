@@ -14,19 +14,19 @@ vi.mock("@/lib/server-env", () => ({
   getServerEnv: vi.fn(() => ({
     RECEIVER_ADDRESS: "0x" + "ab".repeat(20),
     INFERENCE_RATE_PER_SEC: "0.001",
-    X402_FACILITATOR_URL: "https://www.x402.org/facilitator",
+    X402_FACILITATOR_URL: "https://facilitator.x402.fi",
   })),
 }));
 
 // ─── CAIP-2 mapping ─────────────────────────────────────────────────────────
 
 describe("chainIdToCaip2", () => {
-  it("maps Base mainnet", () => {
-    expect(chainIdToCaip2(8453)).toBe("eip155:8453");
+  it("maps Ethereum mainnet", () => {
+    expect(chainIdToCaip2(1)).toBe("eip155:1");
   });
 
-  it("maps Base Sepolia", () => {
-    expect(chainIdToCaip2(84532)).toBe("eip155:84532");
+  it("maps Ethereum Sepolia", () => {
+    expect(chainIdToCaip2(11155111)).toBe("eip155:11155111");
   });
 
   it("returns undefined for unknown chain", () => {
@@ -35,16 +35,16 @@ describe("chainIdToCaip2", () => {
 });
 
 describe("caip2ToChainId", () => {
-  it("maps eip155:8453 to Base mainnet", () => {
-    expect(caip2ToChainId("eip155:8453")).toBe(8453);
+  it("maps eip155:1 to Ethereum mainnet", () => {
+    expect(caip2ToChainId("eip155:1")).toBe(1);
   });
 
-  it("maps eip155:84532 to Base Sepolia", () => {
-    expect(caip2ToChainId("eip155:84532")).toBe(84532);
+  it("maps eip155:11155111 to Ethereum Sepolia", () => {
+    expect(caip2ToChainId("eip155:11155111")).toBe(11155111);
   });
 
   it("returns undefined for unknown CAIP-2", () => {
-    expect(caip2ToChainId("eip155:1")).toBeUndefined();
+    expect(caip2ToChainId("eip155:8453")).toBeUndefined();
   });
 });
 
@@ -58,8 +58,8 @@ describe("encodePaymentHeader / decodePaymentHeader", () => {
       accepts: [
         {
           scheme: "exact",
-          network: "eip155:84532",
-          asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+          network: "eip155:11155111",
+          asset: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
           amount: "10000",
           payTo: "0x" + "ab".repeat(20),
           maxTimeoutSeconds: 60,
@@ -85,16 +85,16 @@ describe("encodePaymentHeader / decodePaymentHeader", () => {
 // ─── buildPaymentRequiredResponse ───────────────────────────────────────────
 
 describe("buildPaymentRequiredResponse", () => {
-  it("builds a valid response for Base Sepolia", () => {
-    const result = buildPaymentRequiredResponse(84532, 10000n, "/api/inference");
+  it("builds a valid response for Ethereum Sepolia", () => {
+    const result = buildPaymentRequiredResponse(11155111, 10000n, "/api/inference");
 
     expect(result.x402Version).toBe(2);
     expect(result.accepts).toHaveLength(1);
 
     const req = result.accepts[0];
     expect(req.scheme).toBe("exact");
-    expect(req.network).toBe("eip155:84532");
-    expect(req.asset).toBe("0x036CbD53842c5426634e7929541eC2318f3dCF7e");
+    expect(req.network).toBe("eip155:11155111");
+    expect(req.asset).toBe("0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238");
     expect(req.amount).toBe("10000");
     expect(req.payTo).toBe("0x" + "ab".repeat(20));
     expect(req.maxTimeoutSeconds).toBe(60);
@@ -115,8 +115,8 @@ describe("paymentPayloadSchema", () => {
       x402Version: 2,
       accepted: {
         scheme: "exact",
-        network: "eip155:84532",
-        asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+        network: "eip155:11155111",
+        asset: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
         amount: "10000",
         payTo: "0x" + "22".repeat(20),
         maxTimeoutSeconds: 60,

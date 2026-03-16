@@ -20,7 +20,7 @@ const serverEnvSchema = z.object({
     .string()
     .url()
     .optional()
-    .default("https://www.x402.org/facilitator"),
+    .default("https://facilitator.x402.fi"),
 });
 
 export function getServerEnv() {

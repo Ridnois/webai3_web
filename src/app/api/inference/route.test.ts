@@ -58,7 +58,7 @@ vi.mock("@/lib/server-env", () => ({
   getServerEnv: vi.fn(() => ({
     RECEIVER_ADDRESS: "0x" + "ab".repeat(20),
     INFERENCE_RATE_PER_SEC: "0.001",
-    X402_FACILITATOR_URL: "https://www.x402.org/facilitator",
+    X402_FACILITATOR_URL: "https://facilitator.x402.fi",
   })),
 }));
 
@@ -76,7 +76,7 @@ vi.mock("drizzle-orm", () => ({ eq: vi.fn(), and: vi.fn(), avg: vi.fn() }));
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const AUTHED = { address: "0xdeadbeef" };
-const SESSION = { address: "0xdeadbeef", chainId: 84532 };
+const SESSION = { address: "0xdeadbeef", chainId: 11155111 };
 
 const VALID_BODY = {
   model: "owner/text-model",
@@ -95,8 +95,8 @@ const VALID_PAYMENT_PAYLOAD = {
   x402Version: 2,
   accepted: {
     scheme: "exact",
-    network: "eip155:84532",
-    asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    network: "eip155:11155111",
+    asset: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
     amount: "10000",
     payTo: "0x" + "ab".repeat(20),
     maxTimeoutSeconds: 60,
@@ -140,7 +140,7 @@ describe("POST /api/inference", () => {
     mockSettleWithFacilitator.mockResolvedValue({
       success: true,
       transaction: "0x" + "cc".repeat(32),
-      network: "eip155:84532",
+      network: "eip155:11155111",
       payer: "0xdeadbeef",
     });
   });
@@ -234,7 +234,7 @@ describe("POST /api/inference", () => {
       expect(decoded.x402Version).toBe(2);
       expect(decoded.accepts).toHaveLength(1);
       expect(decoded.accepts[0].scheme).toBe("exact");
-      expect(decoded.accepts[0].network).toBe("eip155:84532");
+      expect(decoded.accepts[0].network).toBe("eip155:11155111");
     });
 
     it("includes Access-Control-Expose-Headers", async () => {
