@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { HomePromptBox } from "@/components/sections/home-prompt-box";
 import { GalleryGrid } from "@/components/gallery/gallery-grid";
 
@@ -6,56 +7,114 @@ export default function HomePage() {
   return (
     <div className="min-h-screen">
 
-      {/* ── Hero / Composer ───────────────────────────────────────────────── */}
-      <section className="relative flex flex-col items-center overflow-hidden px-4 pt-24 pb-20 sm:pt-32 sm:px-6 lg:px-8">
+      {/* ── Hero ──────────────────────────────────────────────────────────── */}
+      <section className="relative flex flex-col items-center overflow-hidden px-4 pt-20 pb-10 sm:pt-28 sm:px-6 lg:px-8">
 
         {/* Ambient orbs */}
-        <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute left-1/3 -top-16 size-[520px] -translate-x-1/2 rounded-full bg-primary/8 blur-[110px] animate-drift" />
-          <div className="absolute right-1/3 top-10 size-[420px] translate-x-1/2 rounded-full bg-primary/5 blur-[90px] animate-drift delay-300" />
-          <div className="absolute bottom-0 left-1/2 size-[360px] -translate-x-1/2 rounded-full bg-primary/5 blur-[100px] animate-pulse-glow delay-200" />
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+          <div className="absolute left-1/3 -top-20 size-[560px] -translate-x-1/2 rounded-full bg-primary/6 blur-[120px] animate-drift" />
+          <div className="absolute right-1/4 top-0 size-[400px] translate-x-1/2 rounded-full bg-primary/4 blur-[100px] animate-drift delay-300" />
         </div>
 
-        {/* Content */}
-        <div className="relative w-full max-w-2xl">
+        <div className="relative w-full max-w-2xl text-center">
 
-          {/* Greeting */}
-          <div className="animate-fade-in mb-10 text-center">
-            <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-              What will you create?
-            </h1>
-            <p className="mt-2 text-base text-muted-foreground">
-              AI inference, paid per request. On-chain settlement with USDC via x402.
-            </p>
+          {/* Kicker badge */}
+          <div className="animate-fade-in mb-6 flex items-center justify-center">
+            <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/8 px-3.5 py-1 text-[11px] font-mono font-medium uppercase tracking-widest text-primary">
+              <span className="inline-block size-1.5 rounded-full bg-primary animate-pulse" />
+              x402 protocol · ethereum mainnet
+            </span>
           </div>
 
-          {/* Prompt composer */}
-          <div className="animate-fade-in-up delay-100">
-            <HomePromptBox />
+          {/* Headline */}
+          <h1 className="animate-fade-in-up delay-75 text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
+            Pay-per-use AI inference.
+          </h1>
+
+          {/* Description */}
+          <p className="animate-fade-in-up delay-150 mt-4 text-base leading-relaxed text-muted-foreground sm:text-lg">
+            Connect wallet, pay per run in USDC via x402, get results on-chain.
+            <br className="hidden sm:block" />
+            No subscriptions. No accounts. Fully verifiable.
+          </p>
+
+          {/* CTAs */}
+          <div className="animate-fade-in-up delay-200 mt-7 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href="/inference"
+              className="brand-cta inline-flex h-10 items-center gap-2 rounded-full px-6 text-sm font-medium transition-all duration-200"
+            >
+              Run Inference
+              <span className="text-xs opacity-60">→</span>
+            </Link>
+            <Link
+              href="/gallery"
+              className="brand-ghost inline-flex h-10 items-center gap-2 rounded-full px-6 text-sm font-medium transition-all duration-200"
+            >
+              Browse Gallery
+            </Link>
           </div>
 
-          {/* Info row */}
-          <div className="animate-fade-in-up delay-200 mt-6 flex items-center justify-center gap-4">
-            {["USDC on-chain", "x402 settlement", "Replicate models", "No subscription"].map((item) => (
-              <span key={item} className="text-xs text-muted-foreground/50">
-                {item}
-              </span>
+          {/* Stat pills */}
+          <div className="animate-fade-in-up delay-300 mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+            {[
+              ["$0.001", "per second of compute"],
+              ["USDC", "on-chain settlement"],
+              ["EIP-3009", "transferWithAuthorization"],
+            ].map(([value, label]) => (
+              <div key={value} className="flex items-baseline gap-1.5">
+                <span className="font-mono text-sm font-semibold text-foreground">{value}</span>
+                <span className="text-xs text-muted-foreground/60">{label}</span>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── Community Gallery ─────────────────────────────────────────────── */}
-      <section className="border-t border-border/60">
-        <Suspense
-          fallback={
-            <div className="flex h-64 items-center justify-center text-sm text-muted-foreground/50">
-              Loading gallery…
-            </div>
-          }
-        >
-          <GalleryGrid />
-        </Suspense>
+      {/* ── Prompt composer ───────────────────────────────────────────────── */}
+      <section className="px-4 pb-16 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl">
+
+          {/* Section divider */}
+          <div className="mb-5 flex items-center gap-3">
+            <span className="font-mono text-[10px] font-medium uppercase tracking-widest text-primary/70">
+              Try it
+            </span>
+            <div className="h-px flex-1 bg-border/50" />
+          </div>
+
+          <HomePromptBox />
+        </div>
+      </section>
+
+      {/* ── Community gallery ─────────────────────────────────────────────── */}
+      <section className="border-t border-border/60 px-4 py-12 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl">
+
+          {/* Section header */}
+          <div className="mb-6 flex items-center gap-3">
+            <span className="font-mono text-[10px] font-medium uppercase tracking-widest text-primary/70">
+              Community outputs
+            </span>
+            <div className="h-px flex-1 bg-border/50" />
+            <Link
+              href="/gallery"
+              className="text-xs text-muted-foreground/60 transition-colors hover:text-foreground"
+            >
+              View all →
+            </Link>
+          </div>
+
+          <Suspense
+            fallback={
+              <div className="flex h-48 items-center justify-center text-sm text-muted-foreground/40">
+                <span className="font-mono text-xs">Loading gallery…</span>
+              </div>
+            }
+          >
+            <GalleryGrid />
+          </Suspense>
+        </div>
       </section>
 
     </div>
