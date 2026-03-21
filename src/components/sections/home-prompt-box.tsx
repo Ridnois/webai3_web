@@ -1,0 +1,565 @@
+"use client";
+
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useAccount } from "wagmi";
+import {
+  ArrowUp,
+  ImagePlus,
+  MessageSquareText,
+  AudioLines,
+  ChevronDown,
+  Loader2,
+  Sparkles,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useModels } from "@/hooks/use-models";
+import { useInference } from "@/hooks/use-inference";
+import { useAuth } from "@/hooks/use-auth";
+import { useCostEstimate } from "@/hooks/use-cost-estimate";
+import { useX402Payment } from "@/hooks/use-x402-payment";
+import { useWalletBalances } from "@/hooks/use-wallet-balances";
+import { InferenceResult } from "@/components/inference/inference-result";
+import { PaymentConfirmDialog } from "@/components/inference/payment-confirm-dialog";
+import { ConnectDialog } from "@/components/wallet/connect-dialog";
+import { TASK_CONFIGS } from "@/types/task-config";
+import { toInferenceApiError } from "@/lib/inference-error";
+import { formatUsdc, usdcToOnChainAmount } from "@/lib/pricing";
+import { toastInferenceError, toastInsufficientFunds } from "@/lib/toast";
+import type { TaskType, ReplicateModel } from "@/types/inference";
+
+const DEFAULT_MODEL_IDS: Record<TaskType, string> = {
+  "text-to-image": "black-forest-labs/flux-schnell",
+  "text-to-text": "meta/meta-llama-3-70b-instruct",
+  "text-to-sound": "minimax/music-1.5",
+};
+
+const TASKS = [
+  { id: "text-to-image" as TaskType, label: "Image", icon: ImagePlus },
+  { id: "text-to-text" as TaskType, label: "Text", icon: MessageSquareText },
+  { id: "text-to-sound" as TaskType, label: "Audio", icon: AudioLines },
+] as const;
+
+const PLACEHOLDERS: Record<TaskType, string> = {
+  "text-to-image": "Describe what you want to generate…",
+  "text-to-text": "Ask anything or give a task…",
+  "text-to-sound": "Describe the sound or music you want…",
+};
+
+type Suggestion = { label: string; task: TaskType; prompt: string };
+
+const SUGGESTIONS: Suggestion[] = [
+  {
+    label: "Futuristic city at night",
+    task: "text-to-image",
+    prompt:
+      "A photorealistic aerial view of a futuristic city at night, glowing neon lights, rain-slicked streets, cinematic composition",
+  },
+  {
+    label: "Explain blockchain simply",
+    task: "text-to-text",
+    prompt:
+      "Explain how a blockchain works to someone with no technical background. Use a simple analogy.",
+  },
+  {
+    label: "Ambient study music",
+    task: "text-to-sound",
+    prompt:
+      "A calm, looping ambient piano piece suitable for studying. Slow tempo, no percussion, reverb-heavy.",
+  },
+  {
+    label: "Cyberpunk portrait",
+    task: "text-to-image",
+    prompt:
+      "Portrait of a cyberpunk hacker, neon-lit alley background, rain, dramatic lighting, photorealistic, 8k",
+  },
+];
+
+// ── Compact model dropdown ────────────────────────────────────────────────────
+
+function CompactModelDropdown({
+  task,
+  selectedModel,
+  onSelect,
+}: {
+  task: TaskType;
+  selectedModel: ReplicateModel | null;
+  onSelect: (model: ReplicateModel) => void;
+}) {
+  const { data: models, isLoading } = useModels(task);
+  const [open, setOpen] = useState(false);
+
+  const displayName = selectedModel?.name ?? "Select model";
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        disabled={isLoading || !models?.length}
+        className="flex items-center gap-1.5 rounded-lg border border-black/10 dark:border-white/10 bg-black/[0.03] dark:bg-white/[0.04] px-3 py-1.5 text-xs text-muted-foreground transition-all hover:text-foreground hover:border-black/20 dark:hover:border-white/20 disabled:opacity-50"
+      >
+        {isLoading ? (
+          <Loader2 className="size-3 animate-spin" />
+        ) : (
+          <ChevronDown
+            className={cn(
+              "size-3 transition-transform duration-150",
+              open && "rotate-180"
+            )}
+          />
+        )}
+        <span className="max-w-[140px] truncate font-mono text-[11px]">
+          {displayName}
+        </span>
+      </button>
+
+      {open && models && models.length > 0 && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute bottom-full left-0 z-20 mb-2 w-64 overflow-hidden rounded-xl border border-black/10 dark:border-white/10 bg-background shadow-xl shadow-black/20">
+            <div className="max-h-56 overflow-y-auto">
+              {models.map((m) => {
+                const isActive =
+                  m.owner === selectedModel?.owner &&
+                  m.name === selectedModel?.name;
+                return (
+                  <button
+                    key={`${m.owner}/${m.name}`}
+                    type="button"
+                    onClick={() => {
+                      onSelect(m);
+                      setOpen(false);
+                    }}
+                    className={cn(
+                      "flex w-full flex-col gap-0.5 px-3 py-2.5 text-left text-xs transition-colors hover:bg-muted/60",
+                      isActive && "bg-primary/8 text-primary"
+                    )}
+                  >
+                    <span className="font-medium font-mono">{m.name}</span>
+                    {m.description && (
+                      <span className="line-clamp-1 text-muted-foreground/70">
+                        {m.description}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
+
+export function HomePromptBox() {
+  const [task, setTask] = useState<TaskType>("text-to-image");
+  const [prompt, setPrompt] = useState("");
+  const [selectedModel, setSelectedModel] = useState<ReplicateModel | null>(null);
+
+  // Auto-select default model when models load or task changes
+  const { data: models } = useModels(task);
+  useEffect(() => {
+    if (!models?.length) return;
+    const defaultId = DEFAULT_MODEL_IDS[task];
+    const [owner, name] = defaultId.split("/");
+    const found = models.find((m) => m.owner === owner && m.name === name);
+    setSelectedModel(found ?? models[0]);
+  }, [models, task]);
+
+  const config = TASK_CONFIGS[task];
+
+  // ── Inference hooks ──────────────────────────────────────────────────────
+  const inference = useInference();
+  const requestMutation = inference.request;
+  const submitMutation = inference.submit;
+  const { isConnected, isAuthenticated, isSigningIn, signIn } = useAuth();
+  const pendingInput = useRef<Record<string, unknown> | null>(null);
+  const shouldAutoRequestAfterSignIn = useRef(false);
+  const paymentRequirementsRef = useRef<string | null>(null);
+  const [estimatedCostFromServer, setEstimatedCostFromServer] = useState<number | null>(null);
+  const [connectDialogOpen, setConnectDialogOpen] = useState(false);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+
+  const { address, chainId } = useAccount();
+  const { usdcFormatted, usdcRaw } = useWalletBalances(address, chainId);
+  const selectedModelId = selectedModel
+    ? `${selectedModel.owner}/${selectedModel.name}`
+    : undefined;
+  const costEstimate = useCostEstimate(task, selectedModelId);
+  const x402Payment = useX402Payment();
+
+  const estimatedCostUsdc =
+    estimatedCostFromServer ?? costEstimate.data?.estimatedCostUsdc ?? null;
+  const estimatedCostOnChain =
+    estimatedCostUsdc != null ? usdcToOnChainAmount(estimatedCostUsdc) : null;
+  const insufficientFunds =
+    usdcRaw !== undefined &&
+    estimatedCostOnChain !== null &&
+    usdcRaw < estimatedCostOnChain;
+
+  const resetPaymentFlow = useCallback(() => {
+    setPaymentDialogOpen(false);
+    x402Payment.reset();
+    pendingInput.current = null;
+    shouldAutoRequestAfterSignIn.current = false;
+    paymentRequirementsRef.current = null;
+    setEstimatedCostFromServer(null);
+  }, [x402Payment]);
+
+  const startRequestPhase = useCallback(
+    (input: Record<string, unknown>) => {
+      if (!selectedModel) return;
+      requestMutation.mutate(
+        { model: `${selectedModel.owner}/${selectedModel.name}`, task, input },
+        {
+          onSuccess: (data) => {
+            if (data.phase !== "payment-required") return;
+            paymentRequirementsRef.current = data.paymentRequirementsBase64;
+            setEstimatedCostFromServer(data.estimatedCostUsdc);
+            setPaymentDialogOpen(true);
+          },
+          onError: () => {
+            pendingInput.current = null;
+            shouldAutoRequestAfterSignIn.current = false;
+          },
+        }
+      );
+    },
+    [requestMutation, selectedModel, task]
+  );
+
+  const startSubmitPhase = useCallback(
+    (input: Record<string, unknown>, paymentSignatureBase64: string) => {
+      if (!selectedModel) return;
+      submitMutation.mutate(
+        {
+          model: `${selectedModel.owner}/${selectedModel.name}`,
+          task,
+          input,
+          paymentSignatureBase64,
+        },
+        { onSuccess: resetPaymentFlow, onError: resetPaymentFlow }
+      );
+    },
+    [submitMutation, selectedModel, task, resetPaymentFlow]
+  );
+
+  // Error toasts
+  const lastToastedError = useRef<Error | null>(null);
+  useEffect(() => {
+    const err = submitMutation.error;
+    if (err && err !== lastToastedError.current) {
+      lastToastedError.current = err;
+      const parsed = toInferenceApiError(err);
+      const isAuth =
+        parsed?.status === 401 ||
+        err.message.includes("401") ||
+        err.message.toLowerCase().includes("unauthorized");
+      toastInferenceError(err, isAuth ? "Authentication required" : "Inference failed");
+    }
+  }, [submitMutation.error]);
+
+  useEffect(() => {
+    const err = requestMutation.error;
+    if (err && err !== lastToastedError.current) {
+      lastToastedError.current = err;
+      toastInferenceError(err, "Request failed");
+    }
+  }, [requestMutation.error]);
+
+  // Auto sign-in after wallet connect
+  useEffect(() => {
+    if (isConnected && !isAuthenticated && !isSigningIn && pendingInput.current)
+      signIn();
+  }, [isConnected, isAuthenticated, isSigningIn, signIn]);
+
+  // Auto request after sign-in
+  useEffect(() => {
+    if (
+      shouldAutoRequestAfterSignIn.current &&
+      isAuthenticated &&
+      pendingInput.current &&
+      selectedModel &&
+      !requestMutation.isPending
+    ) {
+      shouldAutoRequestAfterSignIn.current = false;
+      startRequestPhase(pendingInput.current);
+    }
+  }, [isAuthenticated, selectedModel, requestMutation.isPending, startRequestPhase]);
+
+  // Payment signed → submit
+  useEffect(() => {
+    if (
+      x402Payment.status === "signed" &&
+      x402Payment.paymentHeader &&
+      pendingInput.current &&
+      selectedModel &&
+      !submitMutation.isPending
+    ) {
+      startSubmitPhase(pendingInput.current, x402Payment.paymentHeader);
+    }
+  }, [
+    x402Payment.status,
+    x402Payment.paymentHeader,
+    selectedModel,
+    submitMutation.isPending,
+    startSubmitPhase,
+  ]);
+
+  function handleTaskChange(t: TaskType) {
+    setTask(t);
+    setSelectedModel(null);
+    submitMutation.reset();
+    requestMutation.reset();
+  }
+
+  function handleSubmit() {
+    if (!selectedModel || !prompt.trim()) return;
+    const input: Record<string, unknown> = { prompt: prompt.trim() };
+
+    if (insufficientFunds && estimatedCostUsdc != null) {
+      toastInsufficientFunds(formatUsdc(estimatedCostUsdc), usdcFormatted);
+      return;
+    }
+    if (!isConnected) {
+      pendingInput.current = input;
+      shouldAutoRequestAfterSignIn.current = true;
+      setConnectDialogOpen(true);
+      return;
+    }
+    if (!isAuthenticated) {
+      pendingInput.current = input;
+      shouldAutoRequestAfterSignIn.current = true;
+      signIn();
+      return;
+    }
+    pendingInput.current = input;
+    startRequestPhase(input);
+  }
+
+  function handlePaymentConfirm() {
+    if (!paymentRequirementsRef.current) return;
+    if (insufficientFunds && estimatedCostUsdc != null) {
+      toastInsufficientFunds(formatUsdc(estimatedCostUsdc), usdcFormatted);
+      return;
+    }
+    x402Payment.signPayment(paymentRequirementsRef.current);
+  }
+
+  function handlePaymentDialogChange(open: boolean) {
+    setPaymentDialogOpen(open);
+    if (!open) {
+      pendingInput.current = null;
+      shouldAutoRequestAfterSignIn.current = false;
+      paymentRequirementsRef.current = null;
+      setEstimatedCostFromServer(null);
+      x402Payment.reset();
+    }
+  }
+
+  function applySuggestion(s: Suggestion) {
+    handleTaskChange(s.task);
+    setPrompt(s.prompt);
+  }
+
+  const isLoading =
+    requestMutation.isPending ||
+    submitMutation.isPending ||
+    isSigningIn ||
+    x402Payment.status === "signing";
+
+  const loadingLabel = isSigningIn
+    ? "Signing in…"
+    : requestMutation.isPending
+    ? "Requesting…"
+    : x402Payment.status === "signing"
+    ? "Sign in wallet…"
+    : submitMutation.isPending
+    ? "Running…"
+    : "Processing…";
+
+  const canSubmit = prompt.trim().length > 0 && !!selectedModel && !isLoading;
+  const result = submitMutation.data?.response;
+
+  return (
+    <div className="w-full space-y-3">
+      {/* Composer card */}
+      <div className="glass overflow-hidden rounded-2xl">
+        {/* Task tabs */}
+        <div className="flex gap-1 border-b border-black/[0.06] dark:border-white/[0.06] px-2 pt-2">
+          {TASKS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => handleTaskChange(id)}
+              className={cn(
+                "relative flex items-center gap-1.5 rounded-t-lg px-4 py-2 text-sm font-medium transition-all duration-150",
+                task === id
+                  ? "text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Icon className="size-3.5" />
+              {label}
+              {task === id && (
+                <span className="absolute bottom-0 inset-x-0 h-[2px] rounded-full bg-primary" />
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Textarea */}
+        <div className="px-4 pt-4 pb-3">
+          <textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            placeholder={PLACEHOLDERS[task]}
+            rows={4}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && canSubmit)
+                handleSubmit();
+            }}
+            className="w-full resize-none bg-transparent text-base leading-relaxed text-foreground placeholder:text-muted-foreground/40 focus:outline-none"
+          />
+        </div>
+
+        {/* Footer: model selector + cost + submit */}
+        <div className="flex items-center justify-between border-t border-black/[0.05] dark:border-white/[0.05] bg-black/[0.02] dark:bg-white/[0.02] px-3 py-2.5">
+          <div className="flex items-center gap-3">
+            <CompactModelDropdown
+              task={task}
+              selectedModel={selectedModel}
+              onSelect={setSelectedModel}
+            />
+            {costEstimate.data && (
+              <span className="text-xs text-muted-foreground/60 font-mono">
+                ~{formatUsdc(costEstimate.data.estimatedCostUsdc)}
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!canSubmit}
+            className={cn(
+              "brand-cta flex size-8 items-center justify-center rounded-full transition-all duration-200",
+              !canSubmit && "opacity-30 cursor-not-allowed"
+            )}
+          >
+            {isLoading ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <ArrowUp className="size-4" />
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Suggestion chips */}
+      {!result && !isLoading && (
+        <div className="flex flex-wrap gap-2">
+          {SUGGESTIONS.map((s) => {
+            const Icon =
+              TASKS.find((t) => t.id === s.task)?.icon ?? ImagePlus;
+            return (
+              <button
+                key={s.label}
+                type="button"
+                onClick={() => applySuggestion(s)}
+                className="flex items-center gap-1.5 rounded-full border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.03] px-3.5 py-1.5 text-sm text-muted-foreground transition-all duration-150 hover:border-primary/40 hover:text-foreground hover:bg-primary/5"
+              >
+                <Icon className="size-3 shrink-0 text-primary/60" />
+                {s.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Result area */}
+      {(isLoading || result || submitMutation.error) && (
+        <div className="glass overflow-hidden rounded-2xl p-5">
+          {isLoading && !result && (
+            <div className="flex flex-col items-center gap-3 py-6 text-center">
+              <Loader2 className="size-7 animate-spin text-primary" />
+              <p className="text-sm font-medium">{loadingLabel}</p>
+              {submitMutation.isPending && (
+                <p className="text-xs text-muted-foreground">
+                  Running {selectedModel?.name ?? "model"}…
+                </p>
+              )}
+            </div>
+          )}
+
+          {result && !isLoading && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+                  Output
+                </p>
+                {result.metrics?.predictTimeMs && (
+                  <p className="text-xs text-muted-foreground">
+                    {(result.metrics.predictTimeMs / 1000).toFixed(1)}s
+                    {result.metrics.actualCostUsdc !== undefined && (
+                      <span className="ml-2">
+                        {formatUsdc(result.metrics.actualCostUsdc)}
+                      </span>
+                    )}
+                  </p>
+                )}
+              </div>
+              <InferenceResult
+                response={result}
+                outputType={config.outputType}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  submitMutation.reset();
+                  requestMutation.reset();
+                }}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                ← New generation
+              </button>
+            </div>
+          )}
+
+          {submitMutation.error && !isLoading && !result && (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/8 p-4 text-sm text-destructive">
+              {submitMutation.error.message}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Empty state hint when no result yet */}
+      {!result && !isLoading && !submitMutation.error && (
+        <div className="flex items-center justify-center gap-2 py-1 text-xs text-muted-foreground/40">
+          <Sparkles className="size-3" />
+          <span>Pay per run · USDC on-chain · x402 settlement</span>
+        </div>
+      )}
+
+      <ConnectDialog
+        open={connectDialogOpen}
+        onOpenChange={setConnectDialogOpen}
+      />
+      <PaymentConfirmDialog
+        open={paymentDialogOpen}
+        onOpenChange={handlePaymentDialogChange}
+        estimatedCostUsdc={estimatedCostUsdc ?? 0}
+        usdcBalance={usdcFormatted}
+        insufficientFunds={insufficientFunds}
+        paymentStatus={x402Payment.status}
+        paymentError={x402Payment.error}
+        inferenceRunning={submitMutation.isPending}
+        onConfirm={handlePaymentConfirm}
+        onRetry={() => x402Payment.reset()}
+      />
+    </div>
+  );
+}

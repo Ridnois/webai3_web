@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { defaultChain } from "@/lib/wagmi";
+import { useAuth } from "@/hooks/use-auth";
 
 interface ConnectDialogProps {
   open: boolean;
@@ -20,17 +21,19 @@ interface ConnectDialogProps {
 export function ConnectDialog({ open, onOpenChange }: ConnectDialogProps) {
   const { connectors, connect, isPending } = useConnect();
   const { switchChain } = useSwitchChain();
+  const { signIn } = useAuth();
 
   function handleConnect(connector: (typeof connectors)[number]) {
     connect(
       { connector },
       {
         onSuccess: (data) => {
-          // If the wallet connected on a different chain, switch to the default
           if (data.chainId !== defaultChain.id) {
             switchChain({ chainId: defaultChain.id });
           }
           onOpenChange(false);
+          // Automatically prompt SIWE sign-in right after connect
+          signIn();
         },
       },
     );
@@ -40,8 +43,10 @@ export function ConnectDialog({ open, onOpenChange }: ConnectDialogProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Connect a Wallet</DialogTitle>
-          <DialogDescription>Choose a wallet to get started.</DialogDescription>
+          <DialogTitle>Connect &amp; Sign In</DialogTitle>
+          <DialogDescription>
+            Choose a wallet to connect, then sign a message to authenticate.
+          </DialogDescription>
         </DialogHeader>
         <div className="grid gap-2">
           {connectors.map((connector) => (

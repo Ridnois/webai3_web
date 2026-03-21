@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { Menu } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { NavLink } from "@/components/nav-link";
 import { WalletButton } from "@/components/wallet/wallet-button";
-import { SignInButton } from "@/components/auth/sign-in-button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +16,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Menu } from "lucide-react";
 
 const mainNav = [
   { href: "/inference", label: "Inference" },
@@ -32,51 +32,41 @@ export function SiteHeader() {
   const { isAdmin, isAuthenticated } = useAuth();
   const [open, setOpen] = useState(false);
 
+  const allNav = [
+    ...mainNav,
+    ...(isAuthenticated ? authNav : []),
+    ...(isAdmin ? [{ href: "/admin", label: "Admin" }] : []),
+  ];
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Logo />
 
-        {/* Desktop nav */}
-        <nav className="hidden items-center gap-6 md:flex" aria-label="Main">
-          {mainNav.map((item) => (
+        <nav className="hidden items-center gap-5 md:flex" aria-label="Main">
+          {allNav.map((item) => (
             <NavLink key={item.href} href={item.href}>
               {item.label}
             </NavLink>
           ))}
-          {isAuthenticated &&
-            authNav.map((item) => (
-              <NavLink key={item.href} href={item.href}>
-                {item.label}
-              </NavLink>
-            ))}
-          {isAdmin && <NavLink href="/admin">Admin</NavLink>}
         </nav>
 
-        <div className="flex items-center gap-3">
-          <SignInButton />
+        <div className="flex items-center gap-2">
+          <ThemeToggle className="hidden sm:flex" />
           <WalletButton />
 
-          {/* Mobile menu */}
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="md:hidden"
-                aria-label="Open menu"
-              >
+              <Button variant="ghost" size="icon" className="md:hidden" aria-label="Open menu">
                 <Menu className="size-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-64">
+            <SheetContent side="right" className="w-60">
               <SheetHeader>
-                <SheetTitle>
-                  <Logo />
-                </SheetTitle>
+                <SheetTitle className="sr-only">Navigation</SheetTitle>
               </SheetHeader>
-              <nav className="flex flex-col gap-1 pt-4" aria-label="Mobile">
-                {mainNav.map((item) => (
+              <nav className="flex flex-col gap-0.5 pt-6" aria-label="Mobile">
+                {allNav.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
@@ -86,26 +76,6 @@ export function SiteHeader() {
                     {item.label}
                   </Link>
                 ))}
-                {isAuthenticated &&
-                  authNav.map((item) => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setOpen(false)}
-                      className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
-                {isAdmin && (
-                  <Link
-                    href="/admin"
-                    onClick={() => setOpen(false)}
-                    className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                  >
-                    Admin
-                  </Link>
-                )}
               </nav>
             </SheetContent>
           </Sheet>

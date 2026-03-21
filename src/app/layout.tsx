@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { ThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { Web3Provider } from "@/providers/web3-provider";
+import { PresaleFloat } from "@/components/presale-float";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -28,23 +30,26 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
       >
-        <Web3Provider>
-          <SiteHeader />
-          <main>{children}</main>
-          <SiteFooter />
-          <Toaster
-            position="bottom-right"
-            theme="system"
-            offset={16}
-            gap={8}
-            duration={6000}
-            closeButton
-          />
-        </Web3Provider>
+        <ThemeProvider attribute="class" defaultTheme="dark" disableTransitionOnChange>
+          <Web3Provider>
+            <SiteHeader />
+            <main>{children}</main>
+            <SiteFooter />
+            <PresaleFloat />
+            <Toaster
+              position="bottom-right"
+              theme="system"
+              offset={16}
+              gap={8}
+              duration={6000}
+              closeButton
+            />
+          </Web3Provider>
+        </ThemeProvider>
       </body>
     </html>
   );

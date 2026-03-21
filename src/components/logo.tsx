@@ -7,7 +7,6 @@ export function Logo() {
       <Image src="/logo-2.svg" alt="WebAI3" width={36} height={36} className="block dark:hidden" />
       <Image src="/logo-2-dark.svg" alt="WebAI3" width={36} height={36} className="hidden dark:block" />
       <div>
-      <Image src="/logo-2-dark.svg" alt="WebAI3" width={36} height={36} className="hidden dark:block" />
         <p className="text-base font-bold tracking-tight text-foreground sm:text-lg">
           webai3<span className="text-primary">.app</span>
         </p>
