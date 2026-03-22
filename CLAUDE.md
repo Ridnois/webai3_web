@@ -63,13 +63,15 @@ src/
 │   ├── inference/              # inference-form, result, loading, model-selector,
 │   │                           # cost-estimate, payment-confirm-dialog,
 │   │                           # text-result, image-result, audio-result
-│   ├── gallery/                # gallery-grid, public-result-view
+│   ├── gallery/                # gallery-grid (masonry + lightbox), public-result-view
+│   ├── media/                  # media-presenter (unified media display component)
 │   ├── templates/              # template-grid
 │   ├── history/                # inference-history, inference-history-card
 │   ├── admin/                  # admin-dashboard
-│   ├── dashboard/              # user-dashboard
+│   ├── dashboard/              # user-dashboard (hero stats, media grid, fullscreen)
 │   ├── sections/               # Landing page: hero, showcase, how-it-works,
 │   │                           # features, pricing, templates, stats, cta
+│   ├── presale-float.tsx       # AIC token promo (wallet-gated, /dashboard + /inference)
 │   ├── feature-card.tsx        # Reusable card components
 │   ├── section-heading.tsx
 │   ├── stat-item.tsx
@@ -102,7 +104,8 @@ src/
 │   ├── x402.ts                 # x402 payment protocol helpers
 │   ├── pricing.ts              # Cost estimation + USDC conversion
 │   ├── contracts.ts            # USDC contract addresses/ABIs
-│   ├── wagmi.ts                # Wagmi config (Ethereum mainnet + Sepolia + Anvil)
+│   ├── wagmi.ts                # Wagmi config (chain from NEXT_PUBLIC_TARGET_CHAIN_ID)
+│   ├── wallet-network.ts       # Mobile wallet network switching (EIP-3326 fallback)
 │   ├── replicate.ts            # Replicate API client singleton
 │   ├── r2.ts                   # R2 upload + public URL helpers
 │   ├── rate-limit.ts           # Rate limiting utilities
@@ -340,6 +343,8 @@ NEXT_PUBLIC_SEPOLIA_RPC_URL
 NEXT_PUBLIC_BASE_RPC_URL
 NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL
 NEXT_PUBLIC_ENABLE_DEV_CHAIN
+NEXT_PUBLIC_TARGET_CHAIN_ID      # default: 11155111 (Sepolia)
+NEXT_PUBLIC_LANDING_URL          # default: https://webai3.app
 ```
 Validated in `src/lib/env.ts`.
 
