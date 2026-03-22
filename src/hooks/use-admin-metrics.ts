@@ -3,8 +3,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "./use-auth";
 
-interface ModelMetric {
+export interface ModelMetric {
   model: string;
+  taskType: string;
   totalCalls: number;
   successCount: number;
   failedCount: number;
@@ -13,7 +14,7 @@ interface ModelMetric {
   lastUsed: string | null;
 }
 
-interface MetricsSummary {
+export interface MetricsSummary {
   totalInferences: number;
   uniqueModels: number;
   uniqueUsers: number;
@@ -21,11 +22,33 @@ interface MetricsSummary {
   totalTimeMs: number;
   totalRevenueUsdc: number;
   totalEstimatedUsdc: number;
+  succeededCount: number;
+  failedCount: number;
+}
+
+export interface TaskBreakdownItem {
+  taskType: string;
+  count: number;
+  revenue: number;
+}
+
+export interface DailyMetric {
+  date: string;
+  total: number;
+  succeeded: number;
+  failed: number;
+  revenue: number;
+  textToImage: number;
+  textToText: number;
+  textToSound: number;
 }
 
 export interface AdminMetricsResponse {
   models: ModelMetric[];
   summary: MetricsSummary;
+  taskBreakdown: TaskBreakdownItem[];
+  dailyMetrics: DailyMetric[];
+  hourlyMetrics: DailyMetric[]; // same shape, date is ISO hour string
 }
 
 async function fetchAdminMetrics(): Promise<AdminMetricsResponse> {
@@ -43,5 +66,6 @@ export function useAdminMetrics() {
     queryKey: ["admin-metrics"],
     queryFn: fetchAdminMetrics,
     enabled: isAdmin,
+    refetchInterval: 60_000,
   });
 }
