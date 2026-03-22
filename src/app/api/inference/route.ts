@@ -39,7 +39,6 @@ async function historicalEstimateSeconds(
   model: string,
   task: TaskType,
 ): Promise<number> {
-  // Try model-specific average first
   const [modelResult] = await db
     .select({ avgMs: avg(inferences.predictTimeMs) })
     .from(inferences)
@@ -54,7 +53,6 @@ async function historicalEstimateSeconds(
     return parseFloat(modelResult.avgMs) / 1000;
   }
 
-  // Fall back to task-wide average
   const [taskResult] = await db
     .select({ avgMs: avg(inferences.predictTimeMs) })
     .from(inferences)
@@ -69,19 +67,20 @@ async function historicalEstimateSeconds(
     return parseFloat(taskResult.avgMs) / 1000;
   }
 
-  // Fall back to static default
   return TASK_CONFIGS[task].estimatedSeconds;
 }
 
 /** Strip internal paths, stack traces, and tokens from error messages before sending to client. */
 function sanitizeErrorReason(raw: string): string {
-  // Remove file paths, stack traces, and anything after a newline
   let cleaned = raw.split("\n")[0].trim();
-  // Strip common prefixes from Replicate errors
   cleaned = cleaned.replace(/^(Prediction failed: |Error: )/, "");
-  // Cap length
   if (cleaned.length > 300) cleaned = cleaned.slice(0, 300) + "…";
   return cleaned;
+}
+
+/** Encode a single SSE data line. */
+function sseEvent(event: object): Uint8Array {
+  return new TextEncoder().encode(`data: ${JSON.stringify(event)}\n\n`);
 }
 
 export async function POST(request: NextRequest) {
@@ -114,7 +113,6 @@ export async function POST(request: NextRequest) {
   const env = getServerEnv();
   const ratePerSec = parseFloat(env.INFERENCE_RATE_PER_SEC);
 
-  // Determine chain from session, default to Ethereum Sepolia
   const session = await getSession();
   const chainId = session.chainId ?? 11155111;
 
@@ -153,7 +151,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // ─── Phase 2: Has payment header → verify, run, settle ─────────────────
+  // ─── Phase 2: Has payment header → SSE stream ──────────────────────────
 
   let paymentPayload;
   try {
@@ -165,91 +163,182 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // The accepted requirement is embedded in the payment payload (x402 v2)
   const paymentRequirement = paymentPayload.accepted;
   const estimated = estimateCostUsdc(task, ratePerSec);
-
-  // Verify with facilitator (skip on local dev chain — facilitator doesn't support Anvil)
-  if (!isLocalDevChain(chainId)) {
-    const verifyResult = await verifyWithFacilitator(paymentPayload, paymentRequirement);
-    if (!verifyResult.isValid) {
-      return new NextResponse(
-        JSON.stringify({
-          error: `Payment verification failed: ${verifyResult.invalidReason ?? "unknown"}`,
-          code: "PAYMENT_INVALID",
-        }),
-        {
-          status: 402,
-          headers: {
-            "Content-Type": "application/json",
-            "Access-Control-Expose-Headers": EXPOSE_HEADERS,
-          },
-        }
-      );
-    }
-  }
-
-  // Settle payment before running inference
   const db = getDb();
   const outputType = outputTypeForTask(task);
   const estimatedCost = estimated.toString();
 
-  let settlementTxHash: string | undefined;
-  let settlementResponse;
-  if (isLocalDevChain(chainId)) {
-    settlementTxHash = `0x${crypto.randomUUID().replace(/-/g, "")}${crypto.randomUUID().replace(/-/g, "")}`;
-  } else {
-    try {
-      settlementResponse = await settleWithFacilitator(paymentPayload, paymentRequirement);
-      settlementTxHash = settlementResponse.transaction || undefined;
-    } catch (settleErr) {
-      const settleRaw = settleErr instanceof Error ? settleErr.message : "Settlement failed";
-      console.error("[api/inference] Settlement error:", settleRaw);
-      return NextResponse.json(
-        { error: "Payment settlement failed. Please try again.", code: "SETTLEMENT_FAILED" },
-        { status: 402 }
-      );
-    }
-  }
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        // ── Verify ──────────────────────────────────────────────────────
+        if (!isLocalDevChain(chainId)) {
+          controller.enqueue(sseEvent({ phase: "verifying" }));
+          const verifyResult = await verifyWithFacilitator(paymentPayload, paymentRequirement);
+          if (!verifyResult.isValid) {
+            controller.enqueue(sseEvent({
+              phase: "error",
+              error: `Payment verification failed: ${verifyResult.invalidReason ?? "unknown"}`,
+              code: "PAYMENT_INVALID",
+            }));
+            controller.close();
+            return;
+          }
+        }
 
-  // Run inference (payment already settled)
-  try {
-    const replicate = getReplicateClient();
-    const identifier = model as `${string}/${string}`;
-    const startTime = Date.now();
+        // ── Settle ──────────────────────────────────────────────────────
+        controller.enqueue(sseEvent({ phase: "settling" }));
+        let settlementTxHash: string | undefined;
+        let settlementResponse;
 
-    const rawOutput = await replicate.run(identifier, { input });
-    const predictTimeMs = Date.now() - startTime;
-    const output = normalizeOutput(rawOutput);
-    console.log("[api/inference] Raw output type:", typeof rawOutput, Array.isArray(rawOutput) ? `array[${rawOutput.length}]` : "");
-    console.log("[api/inference] Normalized output:", JSON.stringify(output)?.slice(0, 500));
-    const actualCost = actualCostUsdc(predictTimeMs, ratePerSec);
-    const actualCostStr = actualCost.toString();
+        if (isLocalDevChain(chainId)) {
+          settlementTxHash = `0x${crypto.randomUUID().replace(/-/g, "")}${crypto.randomUUID().replace(/-/g, "")}`;
+        } else {
+          try {
+            settlementResponse = await settleWithFacilitator(paymentPayload, paymentRequirement);
+            settlementTxHash = settlementResponse.transaction || undefined;
+          } catch (settleErr) {
+            const settleRaw = settleErr instanceof Error ? settleErr.message : "Settlement failed";
+            console.error("[api/inference] Settlement error:", settleRaw);
+            controller.enqueue(sseEvent({
+              phase: "error",
+              error: "Payment settlement failed. Please try again.",
+              code: "SETTLEMENT_FAILED",
+            }));
+            controller.close();
+            return;
+          }
+        }
 
-    const costFields = {
-      estimatedCostUsdc: estimatedCost,
-      actualCostUsdc: actualCostStr,
-      paymentTxHash: settlementTxHash ?? null,
-      paymentChainId: chainId,
-    };
+        // ── Run inference ────────────────────────────────────────────────
+        controller.enqueue(sseEvent({ phase: "running", txHash: settlementTxHash }));
 
-    const costMetrics = {
-      predictTimeMs,
-      estimatedCostUsdc: parseFloat(estimatedCost),
-      actualCostUsdc: actualCost,
-    };
+        const replicate = getReplicateClient();
+        const identifier = model as `${string}/${string}`;
+        const startTime = Date.now();
 
-    let r2Keys: string[] | null = null;
-    let outputData: unknown = null;
-    let responseOutput: unknown = output;
+        let rawOutput: unknown;
+        try {
+          rawOutput = await replicate.run(identifier, { input });
+        } catch (err) {
+          const rawMessage = err instanceof Error ? err.message : "Unknown error";
+          const isModelNotFound =
+            rawMessage.includes("404") &&
+            (rawMessage.includes("could not be found") || rawMessage.includes("Not Found"));
 
-    if (outputType === "text") {
-      outputData = output;
-    } else {
-      // Media output — upload to R2
-      const mediaUrls = extractMediaUrls(output);
-      console.log("[api/inference] Extracted media URLs:", mediaUrls);
-      if (mediaUrls.length > 0) {
+          console.error("[api/inference] Inference error:", rawMessage);
+
+          try {
+            await db.insert(inferences).values({
+              userAddress: auth.address,
+              taskType: task,
+              model,
+              input,
+              outputType,
+              status: "failed",
+              errorMessage: rawMessage,
+              estimatedCostUsdc: estimatedCost,
+              paymentTxHash: settlementTxHash ?? null,
+              paymentChainId: chainId,
+            });
+          } catch { /* don't mask original error */ }
+
+          controller.enqueue(sseEvent({
+            phase: "error",
+            error: isModelNotFound
+              ? `Model "${model}" is no longer available on Replicate. Please select a different model.`
+              : "Inference failed. Please try again later.",
+            code: isModelNotFound ? "MODEL_NOT_FOUND" : "INFERENCE_ERROR",
+          }));
+          controller.close();
+          return;
+        }
+
+        const predictTimeMs = Date.now() - startTime;
+        const output = normalizeOutput(rawOutput);
+        const actualCost = actualCostUsdc(predictTimeMs, ratePerSec);
+        const actualCostStr = actualCost.toString();
+
+        const costFields = {
+          estimatedCostUsdc: estimatedCost,
+          actualCostUsdc: actualCostStr,
+          paymentTxHash: settlementTxHash ?? null,
+          paymentChainId: chainId,
+        };
+
+        const costMetrics = {
+          predictTimeMs,
+          estimatedCostUsdc: parseFloat(estimatedCost),
+          actualCostUsdc: actualCost,
+        };
+
+        const settlementBase64 = settlementResponse
+          ? encodePaymentHeader(settlementResponse)
+          : null;
+
+        // ── Persist & respond ────────────────────────────────────────────
+        if (outputType !== "text") {
+          const mediaUrls = extractMediaUrls(output);
+          if (mediaUrls.length > 0) {
+            const [record] = await db
+              .insert(inferences)
+              .values({
+                userAddress: auth.address,
+                taskType: task,
+                model,
+                input,
+                outputType,
+                status: "pending",
+                predictTimeMs,
+                ...costFields,
+              })
+              .returning({ id: inferences.id });
+
+            let r2Keys: string[];
+            try {
+              r2Keys = await Promise.all(
+                mediaUrls.map((url, i) =>
+                  uploadMediaToR2(url, auth.address, record.id, i)
+                )
+              );
+            } catch (uploadErr) {
+              const uploadRaw = uploadErr instanceof Error ? uploadErr.message : "Unknown upload error";
+              console.error("[api/inference] Upload error:", uploadRaw);
+              try {
+                await db
+                  .update(inferences)
+                  .set({ status: "failed", errorMessage: uploadRaw })
+                  .where(eq(inferences.id, record.id));
+              } catch { /* don't mask */ }
+              controller.enqueue(sseEvent({
+                phase: "error",
+                error: "Failed to process media output. Please try again.",
+                code: "INFERENCE_ERROR",
+              }));
+              controller.close();
+              return;
+            }
+
+            await db
+              .update(inferences)
+              .set({ r2Keys, status: "succeeded" })
+              .where(eq(inferences.id, record.id));
+
+            const publicUrls = getPublicUrls(r2Keys);
+            const responseOutput = publicUrls.length === 1 ? publicUrls[0] : publicUrls;
+
+            controller.enqueue(sseEvent({
+              phase: "done",
+              result: { id: record.id, output: responseOutput, status: "succeeded", metrics: costMetrics },
+              settlementBase64,
+            }));
+            controller.close();
+            return;
+          }
+        }
+
+        // Text output or no media URLs
         const [record] = await db
           .insert(inferences)
           .values({
@@ -258,130 +347,41 @@ export async function POST(request: NextRequest) {
             model,
             input,
             outputType,
-            status: "pending",
+            outputData: output,
+            r2Keys: null,
+            status: "succeeded",
             predictTimeMs,
             ...costFields,
           })
           .returning({ id: inferences.id });
 
+        controller.enqueue(sseEvent({
+          phase: "done",
+          result: { id: record.id, output, status: "succeeded", metrics: costMetrics },
+          settlementBase64,
+        }));
+        controller.close();
+
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        console.error("[api/inference] Stream error:", msg);
         try {
-          r2Keys = await Promise.all(
-            mediaUrls.map((url, i) =>
-              uploadMediaToR2(url, auth.address, record.id, i)
-            )
-          );
-        } catch (uploadErr) {
-          const uploadRaw = uploadErr instanceof Error ? uploadErr.message : "Unknown upload error";
-          console.error("[api/inference] Upload error:", uploadRaw);
-          try {
-            await db
-              .update(inferences)
-              .set({ status: "failed", errorMessage: uploadRaw })
-              .where(eq(inferences.id, record.id));
-          } catch {
-            // DB update failed — don't mask the original error
-          }
-          return NextResponse.json(
-            { error: "Failed to process media output. Please try again.", code: "INFERENCE_ERROR", reason: sanitizeErrorReason(uploadRaw) },
-            { status: 502 }
-          );
-        }
-
-        await db
-          .update(inferences)
-          .set({ r2Keys, status: "succeeded" })
-          .where(eq(inferences.id, record.id));
-
-        const publicUrls = getPublicUrls(r2Keys);
-        responseOutput = publicUrls.length === 1 ? publicUrls[0] : publicUrls;
-
-        const responseBody = JSON.stringify({
-          id: record.id,
-          output: responseOutput,
-          status: "succeeded",
-          metrics: costMetrics,
-        });
-
-        const headers: Record<string, string> = {
-          "Content-Type": "application/json",
-          "Access-Control-Expose-Headers": EXPOSE_HEADERS,
-        };
-        if (settlementResponse) {
-          headers["Payment-Response"] = encodePaymentHeader(settlementResponse);
-        }
-
-        return new NextResponse(responseBody, { status: 200, headers });
+          controller.enqueue(sseEvent({
+            phase: "error",
+            error: sanitizeErrorReason(msg),
+            code: "INTERNAL_ERROR",
+          }));
+          controller.close();
+        } catch { /* stream already closed */ }
       }
-    }
+    },
+  });
 
-    // Text output or no media URLs found — insert directly
-    const [record] = await db
-      .insert(inferences)
-      .values({
-        userAddress: auth.address,
-        taskType: task,
-        model,
-        input,
-        outputType,
-        outputData,
-        r2Keys,
-        status: "succeeded",
-        predictTimeMs,
-        ...costFields,
-      })
-      .returning({ id: inferences.id });
-
-    const responseBody = JSON.stringify({
-      id: record.id,
-      output: responseOutput,
-      status: "succeeded",
-      metrics: costMetrics,
-    });
-
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
       "Access-Control-Expose-Headers": EXPOSE_HEADERS,
-    };
-    if (settlementResponse) {
-      headers["Payment-Response"] = encodePaymentHeader(settlementResponse);
-    }
-
-    return new NextResponse(responseBody, { status: 200, headers });
-  } catch (err) {
-    const rawMessage = err instanceof Error ? err.message : "Unknown error";
-    const isModelNotFound =
-      rawMessage.includes("404") &&
-      (rawMessage.includes("could not be found") || rawMessage.includes("Not Found"));
-
-    const errorCode = isModelNotFound ? "MODEL_NOT_FOUND" : "INFERENCE_ERROR";
-    const errorMessage = isModelNotFound
-      ? `Model "${model}" is no longer available on Replicate. Please select a different model.`
-      : "Inference failed. Please try again later.";
-
-    console.error("[api/inference] Inference error:", rawMessage);
-    const httpStatus = isModelNotFound ? 404 : 502;
-
-    // Best-effort: persist the failure (payment was already settled)
-    try {
-      await db.insert(inferences).values({
-        userAddress: auth.address,
-        taskType: task,
-        model,
-        input,
-        outputType,
-        status: "failed",
-        errorMessage: rawMessage,
-        estimatedCostUsdc: estimatedCost,
-        paymentTxHash: settlementTxHash ?? null,
-        paymentChainId: chainId,
-      });
-    } catch {
-      // DB insert failed — don't mask the original error
-    }
-
-    return NextResponse.json(
-      { error: errorMessage, code: errorCode, reason: sanitizeErrorReason(rawMessage) },
-      { status: httpStatus }
-    );
-  }
+    },
+  });
 }

@@ -11,7 +11,8 @@ import {
 } from "@/components/ui/dialog";
 import { formatUsdc } from "@/lib/pricing";
 import type { PaymentStatus } from "@/hooks/use-x402-payment";
-import { Loader2 } from "lucide-react";
+import type { InferencePhase } from "@/hooks/use-inference";
+import { CheckCircle2, Loader2 } from "lucide-react";
 
 interface PaymentConfirmDialogProps {
   open: boolean;
@@ -21,17 +22,50 @@ interface PaymentConfirmDialogProps {
   insufficientFunds: boolean;
   paymentStatus: PaymentStatus;
   paymentError: Error | null;
-  inferenceRunning: boolean;
+  inferencePhase: InferencePhase;
   onConfirm: () => void;
   onRetry: () => void;
 }
 
-const STATUS_LABELS: Record<PaymentStatus, string> = {
-  idle: "",
-  signing: "Sign in wallet... (no gas required!)",
-  signed: "Signed",
-  error: "Signing failed",
-};
+function PhaseStatus({ paymentStatus, inferencePhase }: {
+  paymentStatus: PaymentStatus;
+  inferencePhase: InferencePhase;
+}) {
+  if (paymentStatus === "signing") {
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="size-4 animate-spin" />
+        Sign in wallet… (no gas required)
+      </div>
+    );
+  }
+
+  if (inferencePhase === "verifying") {
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="size-4 animate-spin" />
+        Verifying payment…
+      </div>
+    );
+  }
+
+  if (inferencePhase === "settling") {
+    return (
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <CheckCircle2 className="size-4 text-primary" />
+          Payment verified
+        </div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" />
+          Confirming on-chain…
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
 
 export function PaymentConfirmDialog({
   open,
@@ -41,13 +75,14 @@ export function PaymentConfirmDialog({
   insufficientFunds,
   paymentStatus,
   paymentError,
-  inferenceRunning,
+  inferencePhase,
   onConfirm,
   onRetry,
 }: PaymentConfirmDialogProps) {
   const isProcessing =
     paymentStatus === "signing" ||
-    inferenceRunning;
+    inferencePhase === "verifying" ||
+    inferencePhase === "settling";
 
   return (
     <Dialog open={open} onOpenChange={isProcessing ? () => {} : onOpenChange}>
@@ -74,12 +109,7 @@ export function PaymentConfirmDialog({
           </div>
 
           {isProcessing && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="size-4 animate-spin" />
-              {inferenceRunning
-                ? "Running inference..."
-                : STATUS_LABELS[paymentStatus]}
-            </div>
+            <PhaseStatus paymentStatus={paymentStatus} inferencePhase={inferencePhase} />
           )}
 
           {paymentStatus === "error" && paymentError && (
@@ -103,7 +133,7 @@ export function PaymentConfirmDialog({
               {isProcessing ? (
                 <>
                   <Loader2 className="mr-2 size-4 animate-spin" />
-                  Processing...
+                  Processing…
                 </>
               ) : (
                 `Sign & Run ${formatUsdc(estimatedCostUsdc)}`

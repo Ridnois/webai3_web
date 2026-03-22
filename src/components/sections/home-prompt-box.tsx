@@ -175,6 +175,7 @@ export function HomePromptBox() {
   const inference = useInference();
   const requestMutation = inference.request;
   const submitMutation = inference.submit;
+  const inferencePhase = inference.inferencePhase;
   const { isConnected, isAuthenticated, isSigningIn, signIn } = useAuth();
   const pendingInput = useRef<Record<string, unknown> | null>(null);
   const shouldAutoRequestAfterSignIn = useRef(false);
@@ -269,6 +270,13 @@ export function HomePromptBox() {
       toastInferenceError(err, "Request failed");
     }
   }, [requestMutation.error]);
+
+  // Close payment dialog once inference starts running (payment confirmed)
+  useEffect(() => {
+    if (inferencePhase === "running") {
+      setPaymentDialogOpen(false);
+    }
+  }, [inferencePhase]);
 
   // Auto sign-in after wallet connect
   useEffect(() => {
@@ -377,6 +385,12 @@ export function HomePromptBox() {
     ? "Requesting…"
     : x402Payment.status === "signing"
     ? "Sign in wallet…"
+    : inferencePhase === "verifying"
+    ? "Verifying payment…"
+    : inferencePhase === "settling"
+    ? "Confirming on-chain…"
+    : inferencePhase === "running"
+    ? "Running inference…"
     : submitMutation.isPending
     ? "Running…"
     : "Processing…";
@@ -556,7 +570,7 @@ export function HomePromptBox() {
         insufficientFunds={insufficientFunds}
         paymentStatus={x402Payment.status}
         paymentError={x402Payment.error}
-        inferenceRunning={submitMutation.isPending}
+        inferencePhase={inferencePhase}
         onConfirm={handlePaymentConfirm}
         onRetry={() => x402Payment.reset()}
       />
