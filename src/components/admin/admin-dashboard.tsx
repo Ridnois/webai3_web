@@ -203,22 +203,23 @@ function DashboardHeader({
   isLoading: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Platform Overview</h1>
+        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Platform Overview</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
           Inference activity, revenue, and model performance
         </p>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex shrink-0 items-center gap-2">
         <div className="flex items-center gap-2 rounded-full border border-border/60 bg-muted/30 px-3 py-1.5">
           <span className="relative flex size-2">
             <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75" />
             <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
           </span>
-          <span className="text-xs text-muted-foreground">
+          <span className="hidden text-xs text-muted-foreground sm:inline">
             Updated {timeAgo(fetchedAt)}
           </span>
+          <span className="text-xs text-muted-foreground sm:hidden">Live</span>
         </div>
         <Button
           variant="outline"
@@ -228,7 +229,7 @@ function DashboardHeader({
           className="gap-1.5 text-xs"
         >
           <RefreshCw className={`size-3.5 ${isLoading ? "animate-spin" : ""}`} />
-          Refresh
+          <span className="hidden sm:inline">Refresh</span>
         </Button>
       </div>
     </div>
@@ -266,7 +267,7 @@ function KpiCard({
         </div>
       </CardHeader>
       <CardContent className="pl-5">
-        <div className="text-2xl font-bold tracking-tight tabular-nums">{value}</div>
+        <div className="truncate text-xl font-bold tracking-tight tabular-nums sm:text-2xl">{value}</div>
         {secondary && (
           <div className="mt-1.5 text-xs text-muted-foreground">{secondary}</div>
         )}
@@ -319,31 +320,21 @@ function SecondaryMetricsStrip({
   totalModels: number;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border border-border/60 bg-muted/20 px-4 py-3">
+    <div className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-lg border border-border/60 bg-muted/20 px-4 py-3 sm:grid-cols-3 md:grid-cols-4 lg:flex lg:flex-wrap lg:items-center lg:gap-x-5 lg:gap-y-2">
       <MetricPill
         label="Failed"
         value={failedCount.toLocaleString()}
         color={failedCount > 0 ? "#ef4444" : undefined}
       />
-      <div className="h-3 w-px bg-border/60" />
       <MetricPill
-        label="Success rate"
+        label="Success"
         value={successRate != null ? `${successRate}%` : "—"}
         color={successRate != null ? (successRate >= 90 ? "#22c55e" : successRate >= 70 ? "#f59e0b" : "#ef4444") : undefined}
       />
-      <div className="h-3 w-px bg-border/60" />
       <MetricPill label="Today" value={todayTotal.toLocaleString()} />
-      <div className="h-3 w-px bg-border/60" />
       <MetricPill label="$/inference" value={`$${revenuePerInference.toFixed(4)}`} />
-      <div className="h-3 w-px bg-border/60" />
       <MetricPill label="Compute" value={formatDuration(totalTimeMs)} />
-      <div className="h-3 w-px bg-border/60" />
-      {peakHour && (
-        <>
-          <MetricPill label="Peak hour" value={peakHour} />
-          <div className="h-3 w-px bg-border/60" />
-        </>
-      )}
+      {peakHour && <MetricPill label="Peak hour" value={peakHour} />}
       <MetricPill label="Active models" value={`${activeModels} / ${totalModels}`} />
     </div>
   );
@@ -354,12 +345,12 @@ function SecondaryMetricsStrip({
 function LoadingSkeleton() {
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-2">
           <Skeleton className="h-7 w-48" />
           <Skeleton className="h-4 w-72" />
         </div>
-        <Skeleton className="h-8 w-36 rounded-full" />
+        <Skeleton className="h-8 w-28 rounded-full sm:w-36" />
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
@@ -408,7 +399,7 @@ function InferenceTrendChart({
 
   return (
     <Card className="lg:col-span-2">
-      <CardHeader className="flex flex-row items-start justify-between gap-2">
+      <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <CardTitle className="text-base font-semibold">Inferences</CardTitle>
           <CardDescription>
@@ -418,7 +409,7 @@ function InferenceTrendChart({
         <RangeToggle value={range} onChange={setRange} />
       </CardHeader>
       <CardContent>
-        <ChartContainer config={inferenceChartConfig} className="h-64 w-full">
+        <ChartContainer config={inferenceChartConfig} className="h-56 w-full sm:h-64">
           <AreaChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
             <defs>
               <linearGradient id="imgGrad" x1="0" y1="0" x2="0" y2="1">
@@ -562,7 +553,7 @@ function RevenueTrendChart({
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-2">
+      <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <CardTitle className="text-base font-semibold">Revenue</CardTitle>
           <CardDescription>USDC settled · {isHourly ? "hourly" : "daily"}</CardDescription>
@@ -646,7 +637,7 @@ function TopModelsChart({
           >
             <CartesianGrid horizontal={false} strokeDasharray="3 3" className="stroke-border/40" />
             <XAxis type="number" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-            <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={88} />
+            <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={72} />
             <ChartTooltip content={<ChartTooltipContent />} />
             <Bar dataKey="calls" radius={[0, 3, 3, 0]} cursor="pointer">
               {top.map((entry, i) => (
@@ -687,10 +678,10 @@ function ModelTable({
                   <th className="pb-3 pr-3 font-semibold">Type</th>
                   <th className="pb-3 pr-4 text-right font-semibold">Calls</th>
                   <th className="pb-3 pr-4 text-right font-semibold">Success</th>
-                  <th className="pb-3 pr-4 text-right font-semibold">Avg Time</th>
+                  <th className="hidden pb-3 pr-4 text-right font-semibold sm:table-cell">Avg Time</th>
                   <th className="pb-3 pr-4 text-right font-semibold">Revenue</th>
-                  <th className="pb-3 pr-4 text-right font-semibold">$/call</th>
-                  <th className="pb-3 text-right font-semibold">Last Run</th>
+                  <th className="hidden pb-3 pr-4 text-right font-semibold md:table-cell">$/call</th>
+                  <th className="hidden pb-3 text-right font-semibold lg:table-cell">Last Run</th>
                   <th className="pb-3" />
                 </tr>
               </thead>
@@ -709,7 +700,7 @@ function ModelTable({
                       className="group cursor-pointer transition-colors hover:bg-muted/40"
                       onClick={() => onModelClick(m.model)}
                     >
-                      <td className="py-3 pr-4 max-w-[200px]">
+                      <td className="py-3 pr-4 max-w-[140px] sm:max-w-[200px]">
                         <code className="block truncate rounded bg-muted px-1.5 py-0.5 text-xs font-mono">
                           {m.model}
                         </code>
@@ -737,7 +728,7 @@ function ModelTable({
                           {successRate}%
                         </Badge>
                       </td>
-                      <td className="py-3 pr-4 text-right tabular-nums">
+                      <td className="hidden py-3 pr-4 text-right tabular-nums sm:table-cell">
                         {m.avgResponseMs != null
                           ? <span className="font-mono text-xs">{m.avgResponseMs.toLocaleString()} ms</span>
                           : <span className="text-muted-foreground">—</span>}
@@ -745,10 +736,10 @@ function ModelTable({
                       <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums">
                         ${m.totalRevenueUsdc.toFixed(4)}
                       </td>
-                      <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums text-muted-foreground">
+                      <td className="hidden py-3 pr-4 text-right font-mono text-xs tabular-nums text-muted-foreground md:table-cell">
                         ${revenuePerCall.toFixed(4)}
                       </td>
-                      <td className="py-3 text-right text-xs text-muted-foreground">
+                      <td className="hidden py-3 text-right text-xs text-muted-foreground lg:table-cell">
                         {m.lastUsed ? new Date(m.lastUsed).toLocaleDateString() : "—"}
                       </td>
                       <td className="py-3 pl-2">

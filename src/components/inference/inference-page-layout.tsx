@@ -25,6 +25,13 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -195,11 +202,13 @@ function Sidebar({
   isAuthenticated,
   onApplyTemplate,
   onApplyPrompt,
+  className,
 }: {
   task: TaskType;
   isAuthenticated: boolean;
   onApplyTemplate: (t: PromptTemplate) => void;
   onApplyPrompt: (prompt: string) => void;
+  className?: string;
 }) {
   const [activeTab, setActiveTab] = useState<SidebarTab>("templates");
   const templates = getTemplatesByTask(task);
@@ -209,7 +218,7 @@ function Sidebar({
   );
 
   return (
-    <aside className="flex w-56 shrink-0 flex-col overflow-hidden border-r bg-sidebar">
+    <aside className={cn("hidden w-56 shrink-0 flex-col overflow-hidden border-r bg-sidebar md:flex", className)}>
       {/* Tab switcher */}
       <div className="flex shrink-0 border-b">
         <button
@@ -314,7 +323,7 @@ function InlineModelPicker({
         ) : (
           <ChevronDown className={cn("size-3 transition-transform duration-150", open && "rotate-180")} />
         )}
-        <span className="max-w-[180px] truncate font-mono text-[11px]">
+        <span className="max-w-[100px] truncate font-mono text-[11px] sm:max-w-[180px]">
           {selectedModel ? `${selectedModel.owner}/${selectedModel.name}` : "Select model"}
         </span>
       </button>
@@ -322,7 +331,7 @@ function InlineModelPicker({
       {open && models && models.length > 0 && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute bottom-full left-0 z-20 mb-2 w-72 overflow-hidden rounded-xl border bg-background shadow-xl shadow-black/10 dark:shadow-black/40">
+          <div className="absolute bottom-full left-0 z-20 mb-2 w-72 max-w-[calc(100vw-1rem)] overflow-hidden rounded-xl border bg-background shadow-xl shadow-black/10 dark:shadow-black/40">
             <div className="max-h-60 overflow-y-auto">
               {models.map((m) => {
                 const isActive = m.owner === selectedModel?.owner && m.name === selectedModel?.name;
@@ -375,7 +384,7 @@ function ParamsPopover({
           Options
         </button>
       </PopoverTrigger>
-      <PopoverContent side="top" align="start" className="w-72 space-y-4 p-4">
+      <PopoverContent side="top" align="start" className="w-72 max-w-[calc(100vw-2rem)] space-y-4 p-4">
         <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
           Parameters
         </p>
@@ -449,12 +458,12 @@ function EmptyState({
   const Icon = meta.icon;
 
   return (
-    <div className="flex flex-col items-center gap-8 py-16 text-center">
-      <div className={cn("flex size-20 items-center justify-center rounded-2xl ring-1", meta.accent)}>
-        <Icon className="size-9" />
+    <div className="flex flex-col items-center gap-6 py-8 text-center sm:gap-8 sm:py-16">
+      <div className={cn("flex size-16 items-center justify-center rounded-2xl ring-1 sm:size-20", meta.accent)}>
+        <Icon className="size-7 sm:size-9" />
       </div>
       <div className="space-y-1.5">
-        <h2 className="text-xl font-semibold tracking-tight">{meta.title}</h2>
+        <h2 className="text-lg font-semibold tracking-tight sm:text-xl">{meta.title}</h2>
         <p className="max-w-xs text-sm text-muted-foreground">{meta.desc}</p>
       </div>
       <div className="flex flex-wrap justify-center gap-2">
@@ -522,6 +531,44 @@ function LoadingState({ task }: { task: TaskType }) {
         <Loader2 className="size-4 animate-spin text-emerald-500" />
         Generating audio…
       </p>
+    </div>
+  );
+}
+
+// ── Mobile history content ────────────────────────────────────────────────────
+
+function MobileHistoryContent({
+  task,
+  isAuthenticated,
+  onApply,
+}: {
+  task: TaskType;
+  isAuthenticated: boolean;
+  onApply: (prompt: string) => void;
+}) {
+  const history = useInferenceHistory();
+  const taskHistory = (history.data?.items ?? []).filter(
+    (item) => item.taskType === task
+  );
+
+  if (!isAuthenticated) {
+    return <p className="py-8 text-center text-xs text-muted-foreground/50">Sign in to see your history.</p>;
+  }
+  if (history.isLoading) {
+    return (
+      <div className="flex justify-center py-8">
+        <Loader2 className="size-4 animate-spin text-muted-foreground/40" />
+      </div>
+    );
+  }
+  if (taskHistory.length === 0) {
+    return <p className="py-8 text-center text-xs text-muted-foreground/50">No history yet for this task.</p>;
+  }
+  return (
+    <div className="space-y-0.5 p-2">
+      {taskHistory.map((item) => (
+        <HistoryItem key={item.id} item={item} onApply={onApply} />
+      ))}
     </div>
   );
 }
@@ -806,8 +853,11 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
   const result = submitMutation.data?.response;
   const hasActiveContent = !!(result || isLoading || submitMutation.error);
   const taskNav = TASK_NAV.find((n) => n.task === task)!;
+  const [mobileModelOpen, setMobileModelOpen] = useState(false);
+  const [mobileTemplatesOpen, setMobileTemplatesOpen] = useState(false);
+  const [mobileHistoryOpen, setMobileHistoryOpen] = useState(false);
 
-  // ── Shared composer ───────────────────────────────────────────────────────
+  // ── Composer (one textarea, responsive bottom rows) ───────────────────────
   const composer = (
     <div className="overflow-hidden rounded-2xl border bg-background shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary/20">
       <textarea
@@ -819,7 +869,49 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
         rows={3}
         className="w-full resize-none bg-transparent px-4 pt-4 pb-2 text-sm leading-relaxed placeholder:text-muted-foreground/40 focus:outline-none"
       />
-      <div className="flex items-center justify-between px-2 pb-2">
+
+      {/* Mobile bottom row: model chip + cost + send */}
+      <div className="flex items-center gap-2 px-3 pb-3 md:hidden">
+        <button
+          type="button"
+          onClick={() => setMobileModelOpen(true)}
+          disabled={isLoadingModels || !models?.length}
+          className="flex min-w-0 flex-1 items-center gap-1.5 rounded-xl bg-muted/50 px-3 py-2.5 text-left transition-colors active:bg-muted/80 disabled:opacity-40"
+        >
+          {isLoadingModels
+            ? <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
+            : <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+          }
+          <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">
+            {selectedModel ? selectedModel.name : "Select model"}
+          </span>
+        </button>
+        {estimatedCostUsdc !== null && (
+          <span className={cn(
+            "shrink-0 font-mono text-xs",
+            insufficientFunds ? "text-destructive" : "text-muted-foreground/60"
+          )}>
+            ~{formatUsdc(estimatedCostUsdc)}
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={!canSubmit}
+          className={cn(
+            "brand-cta flex size-11 shrink-0 items-center justify-center rounded-full transition-all duration-200",
+            !canSubmit && "opacity-30 cursor-not-allowed"
+          )}
+        >
+          {isLoading
+            ? <Loader2 className="size-4 animate-spin" />
+            : <ArrowUp className="size-4" />
+          }
+        </button>
+      </div>
+
+      {/* Desktop bottom row: inline model + cost + params + send */}
+      <div className="hidden items-center justify-between px-2 pb-2 md:flex">
         <div className="flex items-center gap-0.5">
           <InlineModelPicker
             models={models}
@@ -845,11 +937,7 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
           type="button"
           onClick={handleSubmit}
           disabled={!canSubmit}
-          title={
-            !selectedModel ? "Select a model" :
-            !promptValue.trim() ? "Enter a prompt" :
-            undefined
-          }
+          title={!selectedModel ? "Select a model" : !promptValue.trim() ? "Enter a prompt" : undefined}
           className={cn(
             "brand-cta flex size-8 shrink-0 items-center justify-center rounded-full transition-all duration-200",
             !canSubmit && "opacity-30 cursor-not-allowed"
@@ -868,9 +956,30 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
   return (
     <div className="flex h-[calc(100svh-3.5rem)] flex-col">
 
-      {/* Task tabs */}
-      <div className="shrink-0 border-b bg-background/80 backdrop-blur">
-        <div className="flex gap-1 px-3 py-2">
+      {/* Mobile task tabs: full-width 3-col with icon + label stacked */}
+      <div className="shrink-0 border-b bg-background/80 backdrop-blur md:hidden">
+        <div className="grid grid-cols-3">
+          {TASK_NAV.map(({ task: t, label, icon: Icon, href, activeClass }) => (
+            <Link
+              key={t}
+              href={href}
+              className={cn(
+                "flex flex-col items-center gap-1 py-3.5 text-xs font-medium transition-colors",
+                pathname === href
+                  ? cn(activeClass, "border-b-2 border-current")
+                  : "text-muted-foreground"
+              )}
+            >
+              <Icon className="size-5" />
+              {label}
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* Desktop task tabs */}
+      <div className="hidden shrink-0 border-b bg-background/80 backdrop-blur md:block">
+        <div className="flex items-center gap-1 px-3 py-2">
           {TASK_NAV.map(({ task: t, label, icon: Icon, href, activeClass }) => (
             <Link
               key={t}
@@ -889,10 +998,10 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
         </div>
       </div>
 
-      {/* Body: sidebar + main */}
+      {/* Body: sidebar (desktop-only) + main column */}
       <div className="flex min-h-0 flex-1 overflow-hidden">
 
-        {/* Sidebar */}
+        {/* Desktop sidebar */}
         <Sidebar
           task={task}
           isAuthenticated={isAuthenticated}
@@ -900,83 +1009,220 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
           onApplyPrompt={handleApplyPrompt}
         />
 
-        {/* Main */}
+        {/* Main column */}
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
 
-          {hasActiveContent ? (
-            /* ── Active: output above, composer docked at bottom ── */
-            <>
-              <div className="min-h-0 flex-1 overflow-y-auto">
-                <div className="mx-auto max-w-2xl px-6 py-8">
+          {/* Scrollable content area */}
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {hasActiveContent ? (
+              <div className="mx-auto max-w-2xl px-4 py-6 sm:px-6 sm:py-8">
 
-                  {isLoading && !result && <LoadingState task={task} />}
+                {isLoading && !result && <LoadingState task={task} />}
 
-                  {result && !isLoading && (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <taskNav.icon className="size-3.5 text-muted-foreground/60" />
-                          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
-                            {config.label}
+                {result && !isLoading && (
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <taskNav.icon className="size-3.5 text-muted-foreground/60" />
+                        <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+                          {config.label}
+                        </span>
+                        {result.metrics?.predictTimeMs && (
+                          <span className="text-xs text-muted-foreground">
+                            · {(result.metrics.predictTimeMs / 1000).toFixed(1)}s
+                            {result.metrics.actualCostUsdc !== undefined && (
+                              <span className="ml-1">{formatUsdc(result.metrics.actualCostUsdc)}</span>
+                            )}
                           </span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          {result.metrics?.predictTimeMs && (
-                            <span className="text-xs text-muted-foreground">
-                              {(result.metrics.predictTimeMs / 1000).toFixed(1)}s
-                              {result.metrics.actualCostUsdc !== undefined && (
-                                <span className="ml-1.5">{formatUsdc(result.metrics.actualCostUsdc)}</span>
-                              )}
-                            </span>
-                          )}
-                          <button
-                            type="button"
-                            onClick={handleReset}
-                            className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
-                          >
-                            <RefreshCw className="size-3" />
-                            New
-                          </button>
-                        </div>
+                        )}
                       </div>
-                      <InferenceResult response={result} outputType={config.outputType} />
+                      <button
+                        type="button"
+                        onClick={handleReset}
+                        className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                      >
+                        <RefreshCw className="size-3" />
+                        New
+                      </button>
                     </div>
-                  )}
+                    <InferenceResult response={result} outputType={config.outputType} />
+                  </div>
+                )}
 
-                  {submitMutation.error && !isLoading && !result && (
-                    <div className="rounded-xl border border-destructive/30 bg-destructive/8 p-5 text-sm text-destructive">
-                      {submitMutation.error.message}
-                    </div>
-                  )}
-                </div>
+                {submitMutation.error && !isLoading && !result && (
+                  <div className="rounded-xl border border-destructive/30 bg-destructive/8 p-5 text-sm text-destructive">
+                    {submitMutation.error.message}
+                  </div>
+                )}
               </div>
+            ) : (
+              <div className="flex h-full flex-col">
 
-              <div className="shrink-0 border-t bg-background/95 backdrop-blur">
-                <div className="mx-auto max-w-2xl px-4 pb-5 pt-3">
-                  {composer}
-                  <p className="mt-2 text-center text-[10px] text-muted-foreground/40">
-                    {isLoading ? loadingLabel : "⌘↵ to run · Pay per request in USDC"}
-                  </p>
+                {/* Desktop: centered empty state with icon */}
+                <div className="hidden h-full items-center justify-center md:flex">
+                  <EmptyState
+                    task={task}
+                    onSuggestion={(p) => { setPromptValue(p); textareaRef.current?.focus(); }}
+                  />
                 </div>
+
+                {/* Mobile: compact top-aligned subtitle + suggestion chips */}
+                <div className="flex flex-col gap-4 px-4 pb-4 pt-6 md:hidden">
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+                      {config.label}
+                    </p>
+                    <p className="mt-1.5 text-sm font-medium text-foreground">
+                      {task === "text-to-image" ? "Describe what you want to see"
+                        : task === "text-to-text" ? "Ask anything"
+                        : "Describe the audio you want"}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {TASK_SUGGESTIONS[task].map((s) => (
+                      <button
+                        key={s.label}
+                        type="button"
+                        onClick={() => { setPromptValue(s.prompt); setTimeout(() => textareaRef.current?.focus(), 50); }}
+                        className={cn(
+                          "rounded-full border px-3.5 py-2 text-xs text-muted-foreground transition-all active:scale-95",
+                          task === "text-to-image"
+                            ? "border-violet-500/20 bg-violet-500/5 hover:border-violet-500/40 hover:bg-violet-500/10 hover:text-foreground"
+                            : task === "text-to-text"
+                              ? "border-sky-500/20 bg-sky-500/5 hover:border-sky-500/40 hover:bg-sky-500/10 hover:text-foreground"
+                              : "border-emerald-500/20 bg-emerald-500/5 hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:text-foreground"
+                        )}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
               </div>
-            </>
-          ) : (
-            /* ── Empty: everything centered ── */
-            <div className="flex flex-1 flex-col items-center justify-center gap-8 overflow-y-auto px-6 pb-8">
-              <EmptyState
-                task={task}
-                onSuggestion={(p) => { setPromptValue(p); textareaRef.current?.focus(); }}
-              />
-              <div className="w-full max-w-2xl">
-                {composer}
-                <p className="mt-2 text-center text-[10px] text-muted-foreground/40">
-                  ⌘↵ to run · Pay per request in USDC
-                </p>
-              </div>
+            )}
+          </div>
+
+          {/* Always-docked bottom area */}
+          <div className="shrink-0 border-t bg-background/95 backdrop-blur">
+
+            {/* Mobile quick-action bar: Templates | History | Options */}
+            <div className="flex items-center gap-0.5 border-b border-border/40 px-3 py-1.5 md:hidden">
+
+              {/* Templates sheet */}
+              <Sheet open={mobileTemplatesOpen} onOpenChange={setMobileTemplatesOpen}>
+                <SheetTrigger asChild>
+                  <button type="button" className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground">
+                    <LayoutTemplate className="size-3.5" />
+                    Templates
+                  </button>
+                </SheetTrigger>
+                <SheetContent side="bottom" className="flex h-[65vh] flex-col p-0">
+                  <SheetHeader className="shrink-0 border-b px-4 py-3">
+                    <SheetTitle className="text-sm font-medium">Templates</SheetTitle>
+                  </SheetHeader>
+                  <div className="flex-1 overflow-y-auto p-2">
+                    {getTemplatesByTask(task).length === 0 ? (
+                      <p className="py-8 text-center text-xs text-muted-foreground/50">No templates for this task.</p>
+                    ) : (
+                      getTemplatesByTask(task).map((tmpl) => (
+                        <TemplateItem
+                          key={tmpl.id}
+                          template={tmpl}
+                          onApply={(t) => { handleApplyTemplate(t); setMobileTemplatesOpen(false); }}
+                        />
+                      ))
+                    )}
+                  </div>
+                </SheetContent>
+              </Sheet>
+
+              {/* History sheet */}
+              <Sheet open={mobileHistoryOpen} onOpenChange={setMobileHistoryOpen}>
+                <SheetTrigger asChild>
+                  <button type="button" className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground">
+                    <Clock className="size-3.5" />
+                    History
+                  </button>
+                </SheetTrigger>
+                <SheetContent side="bottom" className="flex h-[65vh] flex-col p-0">
+                  <SheetHeader className="shrink-0 border-b px-4 py-3">
+                    <SheetTitle className="text-sm font-medium">History</SheetTitle>
+                  </SheetHeader>
+                  <div className="flex-1 overflow-y-auto">
+                    <MobileHistoryContent
+                      task={task}
+                      isAuthenticated={isAuthenticated}
+                      onApply={(p) => { handleApplyPrompt(p); setMobileHistoryOpen(false); }}
+                    />
+                  </div>
+                </SheetContent>
+              </Sheet>
+
+              {/* Extra params */}
+              {extraFields.length > 0 && (
+                <ParamsPopover
+                  extraFields={extraFields}
+                  extraValues={extraValues}
+                  setExtraValues={setExtraValues}
+                />
+              )}
+
+              {/* Loading status */}
+              {isLoading && (
+                <span className="ml-auto font-mono text-[11px] text-muted-foreground/60">
+                  {loadingLabel}
+                </span>
+              )}
             </div>
-          )}
+
+            {/* Composer */}
+            <div className="mx-auto max-w-2xl px-3 pb-4 pt-3 sm:px-4 sm:pb-5">
+              {composer}
+              <p className="mt-2 text-center text-[10px] text-muted-foreground/40">
+                <span className="hidden sm:inline">⌘↵ to run · </span>Pay per request in USDC
+              </p>
+            </div>
+          </div>
+
         </div>
       </div>
+
+      {/* Mobile model picker sheet */}
+      <Sheet open={mobileModelOpen} onOpenChange={setMobileModelOpen}>
+        <SheetContent side="bottom" className="flex h-[72vh] flex-col p-0">
+          <SheetHeader className="shrink-0 border-b px-4 py-3">
+            <SheetTitle className="text-sm font-medium">Select Model</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto px-2 py-2">
+            {isLoadingModels ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="size-5 animate-spin text-muted-foreground/40" />
+              </div>
+            ) : (
+              models?.map((m) => {
+                const isActive = m.owner === selectedModel?.owner && m.name === selectedModel?.name;
+                return (
+                  <button
+                    key={`${m.owner}/${m.name}`}
+                    type="button"
+                    onClick={() => { setSelectedModel(m); setMobileModelOpen(false); }}
+                    className={cn(
+                      "flex w-full flex-col gap-0.5 rounded-lg px-3 py-3 text-left transition-colors hover:bg-muted/60 active:bg-muted/80",
+                      isActive && "bg-primary/8 text-primary"
+                    )}
+                  >
+                    <span className="font-mono text-sm font-medium">{m.owner}/{m.name}</span>
+                    {m.description && (
+                      <span className="line-clamp-1 text-xs text-muted-foreground/70">{m.description}</span>
+                    )}
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <ConnectDialog open={connectDialogOpen} onOpenChange={setConnectDialogOpen} />
       <PaymentConfirmDialog

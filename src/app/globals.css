@@ -293,6 +293,30 @@
 .animate-presale-in  { animation: presale-in  0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
 .animate-presale-out { animation: presale-out 0.28s ease-in both; }
 
+/* ─── AIC promo float ───────────────────────────────────────────────── */
+@keyframes aic-glow {
+  0%, 100% { box-shadow: 0 0 20px -4px oklch(0.72 0.15 60 / 18%), 0 8px 28px -8px oklch(0 0 0 / 45%); }
+  50%      { box-shadow: 0 0 32px -2px oklch(0.72 0.15 60 / 32%), 0 8px 28px -8px oklch(0 0 0 / 45%); }
+}
+.aic-promo {
+  background: oklch(0.96 0.01 55 / 92%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid oklch(0.72 0.12 60 / 25%);
+  box-shadow: 0 0 20px -4px oklch(0.72 0.15 60 / 15%), 0 8px 28px -8px oklch(0 0 0 / 20%);
+}
+.dark .aic-promo {
+  background: oklch(0.14 0.02 55 / 92%);
+  border: 1px solid oklch(0.72 0.12 60 / 22%);
+  animation: aic-glow 4.5s ease-in-out infinite;
+}
+.aic-promo:hover {
+  border-color: oklch(0.72 0.15 60 / 40%);
+}
+.dark .aic-promo:hover {
+  border-color: oklch(0.72 0.15 60 / 45%);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

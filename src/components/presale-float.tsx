@@ -1,26 +1,38 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, ArrowRight } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { useAccount } from "wagmi";
+import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const LANDING_URL = process.env.NEXT_PUBLIC_LANDING_URL ?? "https://webai3.app";
-const DISMISS_KEY = "presale_banner_dismissed_until";
-const DISMISS_DAYS = 7;
-const SHOW_DELAY_MS = 3000;
+const DISMISS_KEY = "aic_promo_dismissed_until";
+const DISMISS_DAYS = 3;
+const SHOW_DELAY_MS = 3500;
+
+const ALLOWED_PATHS = ["/dashboard", "/inference"];
 
 export function PresaleFloat() {
+  const pathname = usePathname();
+  const { isConnected } = useAccount();
   const [visible, setVisible] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [exiting, setExiting] = useState(false);
 
+  const isAllowed =
+    isConnected && ALLOWED_PATHS.some((p) => pathname.startsWith(p));
+
   useEffect(() => {
     setMounted(true);
+    if (!isAllowed) return;
+
     const dismissedUntil = localStorage.getItem(DISMISS_KEY);
     if (dismissedUntil && Date.now() < Number(dismissedUntil)) return;
+
     const t = setTimeout(() => setVisible(true), SHOW_DELAY_MS);
     return () => clearTimeout(t);
-  }, []);
+  }, [isAllowed]);
 
   function dismiss(e: React.MouseEvent) {
     e.preventDefault();
@@ -29,37 +41,44 @@ export function PresaleFloat() {
     setTimeout(() => {
       setVisible(false);
       setExiting(false);
-      localStorage.setItem(DISMISS_KEY, String(Date.now() + DISMISS_DAYS * 24 * 60 * 60 * 1000));
+      localStorage.setItem(
+        DISMISS_KEY,
+        String(Date.now() + DISMISS_DAYS * 24 * 60 * 60 * 1000),
+      );
     }, 260);
   }
 
-  if (!mounted || !visible) return null;
+  if (!mounted || !visible || !isAllowed) return null;
 
   return (
-    <div className={cn("fixed bottom-6 right-6 z-50", exiting ? "animate-presale-out" : "animate-presale-in")}>
+    <div
+      className={cn(
+        "fixed bottom-4 right-4 z-50 sm:right-6 sm:bottom-6",
+        exiting ? "animate-presale-out" : "animate-presale-in",
+      )}
+    >
       <a
         href={`${LANDING_URL}#presale`}
         target="_blank"
         rel="noopener noreferrer"
-        className="glass flex items-center gap-3 rounded-full py-2 pl-3.5 pr-2 shadow-lg shadow-black/20 dark:shadow-black/40 transition-all duration-200 hover:shadow-xl hover:scale-[1.02] group"
+        className="aic-promo group flex items-center gap-3 rounded-xl px-3.5 py-2.5 transition-all duration-200 hover:scale-[1.02]"
       >
-        {/* Live dot */}
-        <span className="flex items-center gap-1.5 text-xs font-medium text-foreground">
-          <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-          AIC presale · Phase 1 · <span className="text-primary font-semibold">$0.01</span>
+        <p className="text-xs font-medium text-foreground leading-snug">
+          Save on inference with{" "}
+          <span className="font-semibold text-amber-600 dark:text-amber-400">
+            AIC
+          </span>
+        </p>
+
+        <span className="shrink-0 rounded-md bg-gradient-to-r from-amber-500 to-amber-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-all group-hover:brightness-110">
+          Get AIC
         </span>
 
-        <span className="flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary transition-colors group-hover:bg-primary/15">
-          Invest
-          <ArrowRight className="size-3" />
-        </span>
-
-        {/* Dismiss */}
         <button
           type="button"
           onClick={dismiss}
           aria-label="Dismiss"
-          className="flex size-5 shrink-0 items-center justify-center rounded-full text-muted-foreground/50 transition-colors hover:text-foreground"
+          className="ml-0.5 flex size-5 items-center justify-center rounded-full text-muted-foreground/40 transition-colors hover:text-foreground hover:bg-foreground/10"
         >
           <X className="size-3" />
         </button>
