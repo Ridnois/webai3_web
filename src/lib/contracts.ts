@@ -4,21 +4,26 @@ import { mainnet, sepolia, foundry } from "viem/chains";
 interface UsdcConfig {
   address: Address;
   decimals: number;
+  /** EIP-712 domain name — must match what the contract's name() returns */
+  eip712Name: string;
 }
 
 const usdcContracts: Record<number, UsdcConfig> = {
   [mainnet.id]: {
     address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
     decimals: 6,
+    eip712Name: "USD Coin",
   },
   [sepolia.id]: {
     address: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
     decimals: 6,
+    eip712Name: "USDC",
   },
   // Local dev chain (Anvil fork of Sepolia) — same USDC contract address
   [foundry.id]: {
     address: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
     decimals: 6,
+    eip712Name: "USDC",
   },
 };
 

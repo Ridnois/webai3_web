@@ -113,8 +113,8 @@ export function buildPaymentRequiredResponse(
         payTo: env.RECEIVER_ADDRESS,
         maxTimeoutSeconds: 60,
         extra: {
-          // EIP-712 domain for USDC's transferWithAuthorization (EIP-3009)
-          name: "USD Coin",
+          // EIP-712 domain — name must match the contract's name() return value
+          name: usdcConfig.eip712Name,
           version: "2",
         },
       },
