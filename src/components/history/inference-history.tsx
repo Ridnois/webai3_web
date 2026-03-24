@@ -4,12 +4,13 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useInferenceHistory } from "@/hooks/use-inference-history";
 import { InferenceHistoryCard } from "./inference-history-card";
+import { ConnectSignInButton } from "@/components/auth/connect-sign-in-button";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Shield, History } from "lucide-react";
 
 export function InferenceHistory() {
-  const { isAuthenticated, isLoading: authLoading, signIn, isSigningIn } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [page, setPage] = useState(1);
   const history = useInferenceHistory(page);
 
@@ -35,10 +36,7 @@ export function InferenceHistory() {
             Connect your wallet and sign in to see your past inferences
           </p>
         </div>
-        <Button onClick={signIn} disabled={isSigningIn} variant="outline">
-          <Shield className="size-4" />
-          {isSigningIn ? "Signing..." : "Sign In"}
-        </Button>
+        <ConnectSignInButton />
       </div>
     );
   }

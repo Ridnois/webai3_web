@@ -3,15 +3,10 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Check, Copy } from "lucide-react";
+import { normalizeTextOutput } from "@/lib/output-helpers";
 
 interface TextResultProps {
   output: unknown;
-}
-
-function normalizeTextOutput(output: unknown): string {
-  if (typeof output === "string") return output;
-  if (Array.isArray(output)) return output.join("");
-  return JSON.stringify(output, null, 2);
 }
 
 export function TextResult({ output }: TextResultProps) {

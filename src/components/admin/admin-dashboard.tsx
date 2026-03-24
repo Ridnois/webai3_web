@@ -14,6 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { ConnectSignInButton } from "@/components/auth/connect-sign-in-button";
 import {
   ChartContainer,
   ChartTooltip,
@@ -767,8 +768,6 @@ export function AdminDashboard() {
     isAdmin,
     isAuthenticated,
     isLoading: isAuthLoading,
-    isSigningIn,
-    signIn,
   } = useAuth();
   const { data, isLoading, error, refetch, isFetching } = useAdminMetrics();
 
@@ -817,9 +816,7 @@ export function AdminDashboard() {
               Connect your admin wallet and sign in to continue.
             </p>
             <div className="mt-4">
-              <Button onClick={signIn} disabled={isSigningIn} variant="outline">
-                {isSigningIn ? "Signing…" : "Sign In"}
-              </Button>
+              <ConnectSignInButton />
             </div>
           </CardContent>
         </Card>

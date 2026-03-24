@@ -3,32 +3,13 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TextResult } from "@/components/inference/text-result";
-import { ImageResult } from "@/components/inference/image-result";
-import { AudioResult } from "@/components/inference/audio-result";
-import {
-  ArrowLeft,
-  ImagePlus,
-  MessageSquareText,
-  AudioLines,
-  Globe,
-} from "lucide-react";
+import { ArrowLeft, Globe } from "lucide-react";
+import { TASK_ICONS, TASK_LABELS, shortAddr } from "@/lib/output-constants";
+import { fromGalleryItem } from "@/types/output-item";
+import { OutputView } from "@/components/output/output-view";
 import type { GalleryItem } from "@/hooks/use-gallery";
-
-const TASK_ICONS: Record<string, typeof ImagePlus> = {
-  "text-to-image": ImagePlus,
-  "text-to-text": MessageSquareText,
-  "text-to-sound": AudioLines,
-};
-
-const TASK_LABELS: Record<string, string> = {
-  "text-to-image": "Text to Image",
-  "text-to-text": "Text to Text",
-  "text-to-sound": "Text to Sound",
-};
 
 async function fetchPublicResult(id: string): Promise<GalleryItem> {
   const res = await fetch(`/api/r/${id}`);
@@ -49,24 +30,9 @@ export function PublicResultView({ id }: PublicResultViewProps) {
     queryFn: () => fetchPublicResult(id),
   });
 
-  const Icon = data ? (TASK_ICONS[data.taskType] ?? MessageSquareText) : Globe;
+  const Icon = data ? (TASK_ICONS[data.taskType] ?? Globe) : Globe;
   const label = data ? (TASK_LABELS[data.taskType] ?? data.taskType) : "";
-
-  // Build the output for result components
-  const output = data?.outputType === "text"
-    ? data.outputData
-    : data?.mediaUrls && data.mediaUrls.length === 1
-      ? data.mediaUrls[0]
-      : data?.mediaUrls;
-
-  const prompt =
-    data && typeof data.input?.prompt === "string"
-      ? data.input.prompt
-      : null;
-
-  const shortAddress = data
-    ? `${data.userAddress.slice(0, 6)}...${data.userAddress.slice(-4)}`
-    : "";
+  const item = data ? fromGalleryItem(data) : null;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
@@ -96,7 +62,7 @@ export function PublicResultView({ id }: PublicResultViewProps) {
         </div>
       )}
 
-      {data && (
+      {data && item && (
         <>
           {/* Header */}
           <div className="mb-6 flex items-center gap-4">
@@ -109,7 +75,7 @@ export function PublicResultView({ id }: PublicResultViewProps) {
                 <Badge variant="outline">{data.model.split("/").pop()}</Badge>
               </div>
               <p className="text-sm text-muted-foreground">
-                by {shortAddress} &middot;{" "}
+                by {shortAddr(data.userAddress)} &middot;{" "}
                 {new Date(data.createdAt).toLocaleDateString()}
                 {data.predictTimeMs && (
                   <> &middot; {(data.predictTimeMs / 1000).toFixed(1)}s</>
@@ -118,33 +84,12 @@ export function PublicResultView({ id }: PublicResultViewProps) {
             </div>
           </div>
 
-          {/* Prompt */}
-          {prompt && (
-            <Card className="mb-6">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                  Prompt
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm whitespace-pre-wrap">{prompt}</p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Result */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                Result
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {data.outputType === "text" && <TextResult output={output} />}
-              {data.outputType === "image" && <ImageResult output={output} />}
-              {data.outputType === "audio" && <AudioResult output={output} />}
-            </CardContent>
-          </Card>
+          <OutputView
+            item={item}
+            variant="card"
+            showPrompt
+            showActions
+          />
 
           {/* CTA */}
           <div className="mt-8 text-center">

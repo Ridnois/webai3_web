@@ -2,25 +2,10 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Play, Pause, Download, Volume2, VolumeX } from "lucide-react";
+import { extractAudioUrl } from "@/lib/output-helpers";
 
 interface AudioResultProps {
   output: unknown;
-}
-
-function extractAudioUrl(output: unknown): string | null {
-  if (typeof output === "string") return output;
-  if (
-    output &&
-    typeof output === "object" &&
-    "audio_out" in output &&
-    typeof (output as Record<string, unknown>).audio_out === "string"
-  ) {
-    return (output as Record<string, unknown>).audio_out as string;
-  }
-  if (Array.isArray(output) && output.length > 0 && typeof output[0] === "string") {
-    return output[0];
-  }
-  return null;
 }
 
 function formatTime(seconds: number): string {

@@ -14,35 +14,18 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Dialog,
-  DialogContent,
-} from "@/components/ui/dialog";
 import { InferenceHistoryCard } from "@/components/history/inference-history-card";
+import { OutputLightbox } from "@/components/output/output-lightbox";
+import { ConnectSignInButton } from "@/components/auth/connect-sign-in-button";
+import { fromHistoryItem } from "@/types/output-item";
+import { TASK_LABELS, TASK_ICONS, formatTimeAgo } from "@/lib/output-constants";
 import {
   Shield,
   LayoutDashboard,
-  ImagePlus,
-  MessageSquareText,
-  AudioLines,
   TrendingUp,
-  X,
-  ChevronLeft,
-  ChevronRight,
+  MessageSquareText,
 } from "lucide-react";
 import type { InferenceHistoryItem } from "@/hooks/use-inference-history";
-
-const TASK_LABELS: Record<string, string> = {
-  "text-to-image": "Image",
-  "text-to-text": "Text",
-  "text-to-sound": "Audio",
-};
-
-const TASK_ICONS: Record<string, typeof ImagePlus> = {
-  "text-to-image": ImagePlus,
-  "text-to-text": MessageSquareText,
-  "text-to-sound": AudioLines,
-};
 
 function formatDuration(ms: number): string {
   const seconds = Math.floor(ms / 1000);
@@ -92,107 +75,12 @@ function HeroStatCard({
   );
 }
 
-function ImageViewer({
-  item,
-  allItems,
-  open,
-  onOpenChange,
-  onChangeItem,
-}: {
-  item: InferenceHistoryItem;
-  allItems: InferenceHistoryItem[];
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onChangeItem: (item: InferenceHistoryItem) => void;
-}) {
-  const currentIndex = allItems.findIndex((i) => i.id === item.id);
-  const hasNext = currentIndex < allItems.length - 1;
-  const hasPrev = currentIndex > 0;
-
-  const goToNext = () => {
-    if (hasNext) {
-      onChangeItem(allItems[currentIndex + 1]);
-    }
-  };
-
-  const goPrev = () => {
-    if (hasPrev) {
-      onChangeItem(allItems[currentIndex - 1]);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl w-full h-[90vh] sm:h-screen p-0 border-0 bg-black/95 flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-white/10">
-          <div className="flex-1">
-            <p className="text-sm font-medium text-white">
-              {TASK_LABELS[item.taskType] || item.taskType}
-            </p>
-            <p className="text-xs text-white/60 mt-0.5">
-              {new Date(item.createdAt).toLocaleString()}
-            </p>
-          </div>
-          <button
-            onClick={() => onOpenChange(false)}
-            className="rounded-lg p-2 hover:bg-white/10 transition-colors text-white"
-          >
-            <X className="size-5" />
-          </button>
-        </div>
-
-        {/* Image container */}
-        <div className="flex-1 flex items-center justify-center overflow-hidden relative">
-          {item.mediaUrls?.[0] && (
-            <img
-              src={item.mediaUrls[0]}
-              alt="Generated image"
-              className="max-h-full max-w-full object-contain"
-            />
-          )}
-        </div>
-
-        {/* Navigation and info footer */}
-        <div className="flex items-center justify-between p-4 border-t border-white/10 gap-2">
-          <div className="text-sm text-white/60">
-            {currentIndex + 1} of {allItems.length}
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              onClick={goPrev}
-              disabled={!hasPrev}
-              className="rounded-lg p-2 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-white"
-            >
-              <ChevronLeft className="size-5" />
-            </button>
-            <button
-              onClick={goToNext}
-              disabled={!hasNext}
-              className="rounded-lg p-2 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-white"
-            >
-              <ChevronRight className="size-5" />
-            </button>
-          </div>
-
-          <Link href={`/history/${item.id}`}>
-            <Button size="sm" variant="outline" className="text-xs">
-              View Details
-            </Button>
-          </Link>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 function MediaGridItem({
   item,
   onOpenFullscreen,
 }: {
   item: InferenceHistoryItem;
-  onOpenFullscreen: (item: InferenceHistoryItem) => void;
+  onOpenFullscreen: () => void;
 }) {
   const Icon = TASK_ICONS[item.taskType] ?? MessageSquareText;
   const hasImage = item.outputType === "image" && item.mediaUrls?.[0];
@@ -203,7 +91,7 @@ function MediaGridItem({
       <button
         onClick={(e) => {
           e.preventDefault();
-          onOpenFullscreen(item);
+          onOpenFullscreen();
         }}
         className="absolute inset-0 z-10"
         aria-label="View fullscreen"
@@ -244,7 +132,6 @@ function MediaGridItem({
 function DashboardSkeleton() {
   return (
     <div className="space-y-6 sm:space-y-8">
-      {/* Header skeleton */}
       <div className="flex items-center gap-3">
         <Skeleton className="size-10 rounded-lg" />
         <div className="space-y-1">
@@ -252,15 +139,11 @@ function DashboardSkeleton() {
           <Skeleton className="h-4 w-40" />
         </div>
       </div>
-
-      {/* Hero stats skeleton */}
       <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 3 }).map((_, i) => (
           <Skeleton key={i} className="h-28 sm:h-32 rounded-xl" />
         ))}
       </div>
-
-      {/* Media grid skeleton */}
       <div>
         <Skeleton className="h-6 w-32 mb-4" />
         <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
@@ -269,8 +152,6 @@ function DashboardSkeleton() {
           ))}
         </div>
       </div>
-
-      {/* Stats section skeleton */}
       <div className="grid gap-6 lg:grid-cols-2">
         <Skeleton className="h-64 rounded-lg" />
         <Skeleton className="h-64 rounded-lg" />
@@ -283,19 +164,11 @@ export function UserDashboard() {
   const {
     isAuthenticated,
     isLoading: isAuthLoading,
-    signIn,
-    isSigningIn,
     sessionAddress,
   } = useAuth();
   const { data: stats, isLoading: statsLoading } = useUserStats();
   const { data: history, isLoading: historyLoading } = useInferenceHistory(1);
-  const [fullscreenItem, setFullscreenItem] = useState<InferenceHistoryItem | null>(null);
-  const [fullscreenOpen, setFullscreenOpen] = useState(false);
-
-  const handleOpenFullscreen = (item: InferenceHistoryItem) => {
-    setFullscreenItem(item);
-    setFullscreenOpen(true);
-  };
+  const [fullscreenIdx, setFullscreenIdx] = useState<number | null>(null);
 
   if (isAuthLoading) {
     return <DashboardSkeleton />;
@@ -313,10 +186,7 @@ export function UserDashboard() {
             Connect your wallet and sign in to see your inference metrics and recent work
           </p>
         </div>
-        <Button onClick={signIn} disabled={isSigningIn} className="mt-2">
-          <Shield className="size-4" />
-          {isSigningIn ? "Signing..." : "Sign In"}
-        </Button>
+        <ConnectSignInButton className="mt-2" />
       </div>
     );
   }
@@ -328,6 +198,7 @@ export function UserDashboard() {
   const summary = stats?.summary;
   const recentItems = history?.items.slice(0, 12) ?? [];
   const imageItems = recentItems.filter((i) => i.outputType === "image");
+  const fullscreenItem = fullscreenIdx !== null ? imageItems[fullscreenIdx] : null;
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -346,7 +217,7 @@ export function UserDashboard() {
         </div>
       </div>
 
-      {/* Hero Stats - 3 column responsive grid */}
+      {/* Hero Stats */}
       <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-3">
         <HeroStatCard
           title="Total Spent"
@@ -370,14 +241,18 @@ export function UserDashboard() {
         />
       </div>
 
-      {/* Fullscreen Image Viewer */}
-      {fullscreenItem && (
-        <ImageViewer
-          item={fullscreenItem}
-          allItems={imageItems}
-          open={fullscreenOpen}
-          onOpenChange={setFullscreenOpen}
-          onChangeItem={setFullscreenItem}
+      {/* Fullscreen Lightbox */}
+      {fullscreenItem && fullscreenIdx !== null && (
+        <OutputLightbox
+          item={fromHistoryItem(fullscreenItem)}
+          open
+          onOpenChange={(open) => { if (!open) setFullscreenIdx(null); }}
+          onPrev={() => setFullscreenIdx((i) => (i !== null && i > 0 ? i - 1 : i))}
+          onNext={() => setFullscreenIdx((i) => (i !== null && i < imageItems.length - 1 ? i + 1 : i))}
+          hasPrev={fullscreenIdx > 0}
+          hasNext={fullscreenIdx < imageItems.length - 1}
+          indexLabel={`${fullscreenIdx + 1} of ${imageItems.length}`}
+          isOwner
         />
       )}
 
@@ -395,11 +270,11 @@ export function UserDashboard() {
             )}
           </div>
           <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-            {imageItems.map((item) => (
+            {imageItems.map((item, idx) => (
               <MediaGridItem
                 key={item.id}
                 item={item}
-                onOpenFullscreen={handleOpenFullscreen}
+                onOpenFullscreen={() => setFullscreenIdx(idx)}
               />
             ))}
           </div>
@@ -488,7 +363,7 @@ export function UserDashboard() {
         )}
       </div>
 
-      {/* Recent Activity - List view for non-image inferences */}
+      {/* Recent Activity */}
       {recentItems.length > imageItems.length && (
         <Card>
           <CardHeader>
@@ -508,15 +383,4 @@ export function UserDashboard() {
       )}
     </div>
   );
-}
-
-function formatTimeAgo(date: Date): string {
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (seconds < 60) return "just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
 }

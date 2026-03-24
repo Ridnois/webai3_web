@@ -7,37 +7,15 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useShareInference } from "@/hooks/use-share-inference";
 import { toastSuccess, toastError } from "@/lib/toast";
-import {
-  ImagePlus,
-  MessageSquareText,
-  AudioLines,
-  Play,
-  Pause,
-} from "lucide-react";
+import { TASK_ICONS, TASK_LABELS, formatTimeAgo, getPrompt } from "@/lib/output-constants";
+import { Play, Pause, MessageSquareText } from "lucide-react";
 import type { InferenceHistoryItem } from "@/hooks/use-inference-history";
-
-const TASK_ICONS: Record<string, typeof ImagePlus> = {
-  "text-to-image": ImagePlus,
-  "text-to-text": MessageSquareText,
-  "text-to-sound": AudioLines,
-};
-
-const TASK_LABELS: Record<string, string> = {
-  "text-to-image": "Text to Image",
-  "text-to-text": "Text to Text",
-  "text-to-sound": "Text to Sound",
-};
 
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive"> = {
   succeeded: "default",
   pending: "secondary",
   failed: "destructive",
 };
-
-function getPrompt(item: InferenceHistoryItem): string | null {
-  if (typeof item.input?.prompt === "string") return item.input.prompt;
-  return null;
-}
 
 function InlineAudioPlayer({ url }: { url: string }) {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -88,7 +66,7 @@ export function InferenceHistoryCard({ item }: InferenceHistoryCardProps) {
   const shareMutation = useShareInference();
   const isPublic = item.isPublic === 1;
   const canShare = item.status === "succeeded";
-  const prompt = getPrompt(item);
+  const prompt = getPrompt(item.input);
   const timeAgo = formatTimeAgo(new Date(item.createdAt));
 
   const hasImage = item.outputType === "image" && item.mediaUrls?.[0];
@@ -200,16 +178,4 @@ export function InferenceHistoryCard({ item }: InferenceHistoryCardProps) {
       </Card>
     </Link>
   );
-}
-
-function formatTimeAgo(date: Date): string {
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (seconds < 60) return "just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
-  return date.toLocaleDateString();
 }

@@ -2,25 +2,10 @@
 
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
+import { extractImageUrls } from "@/lib/output-helpers";
 
 interface ImageResultProps {
   output: unknown;
-}
-
-function extractImageUrls(output: unknown): string[] {
-  if (typeof output === "string") return [output];
-  if (Array.isArray(output)) {
-    return output.filter((item): item is string => typeof item === "string");
-  }
-  if (
-    output &&
-    typeof output === "object" &&
-    "url" in output &&
-    typeof (output as Record<string, unknown>).url === "string"
-  ) {
-    return [(output as Record<string, unknown>).url as string];
-  }
-  return [];
 }
 
 export function ImageResult({ output }: ImageResultProps) {
