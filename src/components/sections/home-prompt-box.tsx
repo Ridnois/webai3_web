@@ -154,9 +154,16 @@ function CompactModelDropdown({
 
 // ── Main component ────────────────────────────────────────────────────────────
 
+function autoResize(el: HTMLTextAreaElement) {
+  el.style.height = "auto";
+  el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+}
+
 export function HomePromptBox() {
   const [task, setTask] = useState<TaskType>("text-to-image");
   const [prompt, setPrompt] = useState("");
+  const [isFocused, setIsFocused] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [selectedModel, setSelectedModel] = useState<ReplicateModel | null>(null);
 
   // Auto-select default model when models load or task changes
@@ -401,9 +408,9 @@ export function HomePromptBox() {
   return (
     <div className="w-full space-y-3">
       {/* Composer card */}
-      <div className="glass overflow-hidden rounded-2xl">
+      <div className={cn("glass overflow-hidden rounded-2xl transition-shadow duration-200", isFocused && "prompt-box-focused")}>
         {/* Task tabs */}
-        <div className="flex gap-1 border-b border-black/[0.06] dark:border-white/[0.06] px-2 pt-2">
+        <div className="relative flex gap-1 border-b border-black/[0.06] dark:border-white/[0.06] px-2 pt-2">
           {TASKS.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -418,25 +425,37 @@ export function HomePromptBox() {
             >
               <Icon className="size-3.5" />
               {label}
-              {task === id && (
-                <span className="absolute bottom-0 inset-x-0 h-[2px] rounded-full bg-primary" />
-              )}
             </button>
           ))}
+          {/* Sliding indicator */}
+          <span
+            className="absolute bottom-0 h-[2px] rounded-full bg-primary transition-all duration-200 ease-out"
+            style={{
+              left: `${8 + TASKS.findIndex(t => t.id === task) * (100 / TASKS.length)}%`,
+              width: `${100 / TASKS.length}%`,
+              maxWidth: "80px",
+            }}
+          />
         </div>
 
         {/* Textarea */}
         <div className="px-4 pt-4 pb-3">
           <textarea
+            ref={textareaRef}
             value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
+            onChange={(e) => {
+              setPrompt(e.target.value);
+              autoResize(e.target);
+            }}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
             placeholder={PLACEHOLDERS[task]}
-            rows={4}
+            rows={2}
             onKeyDown={(e) => {
               if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && canSubmit)
                 handleSubmit();
             }}
-            className="w-full resize-none bg-transparent text-base leading-relaxed text-foreground placeholder:text-muted-foreground/40 focus:outline-none"
+            className="w-full resize-none bg-transparent text-base leading-relaxed text-foreground placeholder:text-muted-foreground/40 focus:outline-none max-h-[200px]"
           />
         </div>
 
@@ -449,9 +468,12 @@ export function HomePromptBox() {
               onSelect={setSelectedModel}
             />
             {costEstimate.data && (
-              <span className="text-xs text-muted-foreground/60 font-mono">
-                ~{formatUsdc(costEstimate.data.estimatedCostUsdc)}
-              </span>
+              <div className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1">
+                <span className="font-mono text-[11px] font-semibold text-primary">
+                  {formatUsdc(costEstimate.data.estimatedCostUsdc)}
+                </span>
+                <span className="text-[9px] text-muted-foreground/60 uppercase tracking-wider">est.</span>
+              </div>
             )}
           </div>
           <button
@@ -459,7 +481,8 @@ export function HomePromptBox() {
             onClick={handleSubmit}
             disabled={!canSubmit}
             className={cn(
-              "brand-cta flex size-8 items-center justify-center rounded-full transition-all duration-200",
+              "brand-cta flex items-center justify-center rounded-full transition-all duration-200 size-9 max-sm:size-11",
+              canSubmit && "shadow-[0_0_12px_-2px_oklch(0.78_0.14_65_/_40%)]",
               !canSubmit && "opacity-30 cursor-not-allowed"
             )}
           >
@@ -474,7 +497,7 @@ export function HomePromptBox() {
 
       {/* Suggestion chips */}
       {!result && !isLoading && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex gap-2 overflow-x-auto scrollbar-none -mx-4 px-4 sm:flex-wrap sm:mx-0 sm:px-0 sm:overflow-visible">
           {SUGGESTIONS.map((s) => {
             const Icon =
               TASKS.find((t) => t.id === s.task)?.icon ?? ImagePlus;

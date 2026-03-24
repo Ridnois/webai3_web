@@ -65,6 +65,7 @@ export const settlementResponseSchema = z.object({
   transaction: z.string().optional(),
   network: z.string().optional(),
   payer: z.string().optional(),
+  errorReason: z.string().optional(),
 });
 export type SettlementResponse = z.infer<typeof settlementResponseSchema>;
 
@@ -175,5 +176,13 @@ export async function settleWithFacilitator(
     throw new Error(`Facilitator /settle failed (${res.status}): ${text}`);
   }
 
-  return res.json();
+  const data: SettlementResponse = await res.json();
+
+  if (!data.success) {
+    throw new Error(
+      `Settlement rejected: ${data.errorReason ?? "unknown"}`
+    );
+  }
+
+  return data;
 }

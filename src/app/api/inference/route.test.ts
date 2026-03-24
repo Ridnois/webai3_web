@@ -128,6 +128,28 @@ function makeRequest(body: unknown, paymentSignature?: string): NextRequest {
   });
 }
 
+/** Parse SSE response text into an array of event objects. */
+function parseSSE(text: string): Record<string, unknown>[] {
+  return text
+    .split("\n\n")
+    .filter((chunk) => chunk.startsWith("data: "))
+    .map((chunk) => JSON.parse(chunk.replace("data: ", "")));
+}
+
+/** Extract the last SSE event with phase === "done". */
+function getDoneEvent(events: Record<string, unknown>[]) {
+  return events.find((e) => e.phase === "done") as
+    | { phase: "done"; result: Record<string, unknown>; settlementBase64?: string }
+    | undefined;
+}
+
+/** Extract the last SSE event with phase === "error". */
+function getErrorEvent(events: Record<string, unknown>[]) {
+  return events.find((e) => e.phase === "error") as
+    | { phase: "error"; error: string; code: string }
+    | undefined;
+}
+
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 import { POST } from "./route";
@@ -261,45 +283,52 @@ describe("POST /api/inference", () => {
       mockReturning.mockResolvedValue([{ id: "text-inference-id" }]);
     });
 
-    it("returns 200 with text output after verify + settle", async () => {
+    it("returns 200 SSE stream with text output after verify + settle", async () => {
       const res = await POST(makeRequest(VALID_BODY, VALID_PAYMENT_SIGNATURE_HEADER));
       expect(res.status).toBe(200);
 
-      const body = await res.json();
-      expect(body.id).toBe("text-inference-id");
-      expect(body.output).toBe("The quick brown fox.");
-      expect(body.status).toBe("succeeded");
+      const events = parseSSE(await res.text());
+      const done = getDoneEvent(events);
+      expect(done).toBeTruthy();
+      expect(done!.result.id).toBe("text-inference-id");
+      expect(done!.result.output).toBe("The quick brown fox.");
+      expect(done!.result.status).toBe("succeeded");
     });
 
-    it("includes Payment-Response header on success", async () => {
+    it("includes settlementBase64 in done SSE event", async () => {
       const res = await POST(makeRequest(VALID_BODY, VALID_PAYMENT_SIGNATURE_HEADER));
-      const paymentResponse = res.headers.get("Payment-Response");
-      expect(paymentResponse).toBeTruthy();
+      const events = parseSSE(await res.text());
+      const done = getDoneEvent(events);
+      expect(done).toBeTruthy();
+      expect(done!.settlementBase64).toBeTruthy();
 
-      const decoded = JSON.parse(atob(paymentResponse!));
+      const decoded = JSON.parse(atob(done!.settlementBase64!));
       expect(decoded.success).toBe(true);
       expect(decoded.transaction).toBeTruthy();
     });
 
     it("includes predictTimeMs in metrics", async () => {
       const res = await POST(makeRequest(VALID_BODY, VALID_PAYMENT_SIGNATURE_HEADER));
-      const body = await res.json();
-      expect(typeof body.metrics.predictTimeMs).toBe("number");
-      expect(body.metrics.predictTimeMs).toBeGreaterThanOrEqual(0);
+      const events = parseSSE(await res.text());
+      const done = getDoneEvent(events);
+      expect(done).toBeTruthy();
+      const metrics = done!.result.metrics as Record<string, unknown>;
+      expect(typeof metrics.predictTimeMs).toBe("number");
+      expect(metrics.predictTimeMs as number).toBeGreaterThanOrEqual(0);
     });
 
-    it("returns 402 when facilitator verification fails", async () => {
+    it("returns error SSE event when facilitator verification fails", async () => {
       mockVerifyWithFacilitator.mockResolvedValue({
         isValid: false,
         invalidReason: "Insufficient allowance",
       });
 
       const res = await POST(makeRequest(VALID_BODY, VALID_PAYMENT_SIGNATURE_HEADER));
-      expect(res.status).toBe(402);
-
-      const body = await res.json();
-      expect(body.code).toBe("PAYMENT_INVALID");
-      expect(body.error).toContain("Insufficient allowance");
+      const events = parseSSE(await res.text());
+      const err = getErrorEvent(events);
+      expect(err).toBeTruthy();
+      expect(err!.code).toBe("PAYMENT_INVALID");
+      expect(err!.error).toContain("Insufficient allowance");
     });
 
     it("returns 400 for invalid Payment-Signature header", async () => {
@@ -310,19 +339,27 @@ describe("POST /api/inference", () => {
       expect(body.code).toBe("PAYMENT_INVALID");
     });
 
-    it("returns 402 when settlement fails and does not run inference", async () => {
+    it("does not run inference when settlement HTTP call fails", async () => {
       mockSettleWithFacilitator.mockRejectedValue(
         new Error("Facilitator /settle failed (500): internal error")
       );
 
       const res = await POST(makeRequest(VALID_BODY, VALID_PAYMENT_SIGNATURE_HEADER));
-      expect(res.status).toBe(402);
+      const text = await res.text();
 
-      const body = await res.json();
-      expect(body.code).toBe("SETTLEMENT_FAILED");
-      expect(body.error).toBe("Payment settlement failed. Please try again.");
+      expect(text).toContain('"code":"SETTLEMENT_FAILED"');
+      expect(mockRun).not.toHaveBeenCalled();
+    });
 
-      // Inference should never have been called
+    it("does not run inference when settlement returns success:false", async () => {
+      mockSettleWithFacilitator.mockRejectedValue(
+        new Error("Settlement rejected: invalid_exact_evm_transaction_failed")
+      );
+
+      const res = await POST(makeRequest(VALID_BODY, VALID_PAYMENT_SIGNATURE_HEADER));
+      const text = await res.text();
+
+      expect(text).toContain('"code":"SETTLEMENT_FAILED"');
       expect(mockRun).not.toHaveBeenCalled();
     });
   });
@@ -343,18 +380,21 @@ describe("POST /api/inference", () => {
       mockGetPublicUrls.mockReturnValue([PRESIGNED_URL]);
     });
 
-    it("returns 200 with the presigned URL", async () => {
+    it("returns SSE done event with the presigned URL", async () => {
       const res = await POST(makeRequest(VALID_IMAGE_BODY, VALID_PAYMENT_SIGNATURE_HEADER));
       expect(res.status).toBe(200);
 
-      const body = await res.json();
-      expect(body.id).toBe("image-inference-id");
-      expect(body.output).toBe(PRESIGNED_URL);
-      expect(body.status).toBe("succeeded");
+      const events = parseSSE(await res.text());
+      const done = getDoneEvent(events);
+      expect(done).toBeTruthy();
+      expect(done!.result.id).toBe("image-inference-id");
+      expect(done!.result.output).toBe(PRESIGNED_URL);
+      expect(done!.result.status).toBe("succeeded");
     });
 
     it("uploads media to R2 with the correct arguments", async () => {
-      await POST(makeRequest(VALID_IMAGE_BODY, VALID_PAYMENT_SIGNATURE_HEADER));
+      const res = await POST(makeRequest(VALID_IMAGE_BODY, VALID_PAYMENT_SIGNATURE_HEADER));
+      await res.text(); // consume SSE stream
       expect(mockUploadMediaToR2).toHaveBeenCalledWith(
         IMAGE_URL,
         AUTHED.address,
@@ -366,7 +406,8 @@ describe("POST /api/inference", () => {
     it("does not call R2 upload for text output", async () => {
       mockRun.mockResolvedValue("The quick brown fox.");
       mockReturning.mockResolvedValue([{ id: "text-inference-id" }]);
-      await POST(makeRequest(VALID_BODY, VALID_PAYMENT_SIGNATURE_HEADER));
+      const res = await POST(makeRequest(VALID_BODY, VALID_PAYMENT_SIGNATURE_HEADER));
+      await res.text(); // consume SSE stream
       expect(mockUploadMediaToR2).not.toHaveBeenCalled();
     });
   });
@@ -379,16 +420,15 @@ describe("POST /api/inference", () => {
       mockRun.mockRejectedValue(new Error("Model prediction failed"));
     });
 
-    it("returns 502 when Replicate throws", async () => {
+    it("returns SSE error event when Replicate throws", async () => {
       const res = await POST(makeRequest(VALID_BODY, VALID_PAYMENT_SIGNATURE_HEADER));
-      expect(res.status).toBe(502);
-    });
+      expect(res.status).toBe(200); // SSE stream is always 200
 
-    it("returns the error message and INFERENCE_ERROR code", async () => {
-      const res = await POST(makeRequest(VALID_BODY, VALID_PAYMENT_SIGNATURE_HEADER));
-      const body = await res.json();
-      expect(body.error).toBe("Inference failed. Please try again later.");
-      expect(body.code).toBe("INFERENCE_ERROR");
+      const events = parseSSE(await res.text());
+      const err = getErrorEvent(events);
+      expect(err).toBeTruthy();
+      expect(err!.code).toBe("INFERENCE_ERROR");
+      expect(err!.error).toBe("Inference failed. Please try again later.");
     });
   });
 });

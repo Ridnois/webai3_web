@@ -11,7 +11,7 @@ export function Logo() {
           webai3<span className="text-primary">.app</span>
         </p>
         <p className="hidden text-[10px] uppercase tracking-[0.17em] text-muted-foreground sm:block">
-          AI Payment Settlement Layer
+          Pay-per-use AI
         </p>
       </div>
     </Link>

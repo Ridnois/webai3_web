@@ -209,6 +209,18 @@ export async function POST(request: NextRequest) {
             controller.close();
             return;
           }
+
+          // Defensive: never proceed without a confirmed settlement tx
+          if (!settlementTxHash) {
+            console.error("[api/inference] Settlement returned no tx hash");
+            controller.enqueue(sseEvent({
+              phase: "error",
+              error: "Payment settlement failed. No transaction confirmed.",
+              code: "SETTLEMENT_FAILED",
+            }));
+            controller.close();
+            return;
+          }
         }
 
         // ── Run inference ────────────────────────────────────────────────

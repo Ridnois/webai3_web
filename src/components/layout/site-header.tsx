@@ -18,8 +18,7 @@ import {
 } from "@/components/ui/sheet";
 
 const mainNav = [
-  { href: "/inference", label: "Inference" },
-  { href: "/templates", label: "Templates" },
+  { href: "/inference/text-to-image", label: "Create" },
   { href: "/gallery", label: "Gallery" },
 ];
 

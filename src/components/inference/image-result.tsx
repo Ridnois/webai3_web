@@ -37,11 +37,11 @@ export function ImageResult({ output }: ImageResultProps) {
   return (
     <div className="flex flex-col gap-4">
       {urls.map((url, i) => (
-        <div key={url} className="flex flex-col gap-2 rounded-lg border bg-muted/50 p-3">
+        <div key={url} className="relative flex flex-col gap-2 rounded-lg border bg-muted/50 p-3 overflow-hidden image-shimmer">
           <img
             src={url}
             alt={`Generated image ${i + 1}`}
-            className="w-full rounded-md"
+            className="w-full rounded-md animate-image-reveal"
           />
           <Button variant="outline" size="sm" asChild>
             <a href={url} download target="_blank" rel="noopener noreferrer">

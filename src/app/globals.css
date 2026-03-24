@@ -34,6 +34,10 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-usdc: var(--usdc);
+  --color-usdc-foreground: var(--usdc-foreground);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -183,6 +187,10 @@
   --ring: oklch(0.55 0.16 55 / 40%);
   --accent: oklch(0.94 0.03 70);
   --accent-foreground: oklch(0.28 0.08 55);
+  --success: oklch(0.52 0.16 155);
+  --success-foreground: oklch(0.98 0 0);
+  --usdc: oklch(0.55 0.14 250);
+  --usdc-foreground: oklch(0.98 0 0);
 }
 
 .dark {
@@ -199,6 +207,10 @@
   --ring: oklch(0.78 0.14 65 / 48%);
   --accent: oklch(0.24 0.04 55);
   --accent-foreground: oklch(0.88 0.10 65);
+  --success: oklch(0.72 0.14 155);
+  --success-foreground: oklch(0.11 0 0);
+  --usdc: oklch(0.70 0.12 250);
+  --usdc-foreground: oklch(0.11 0 0);
 }
 
 /* ─── Glass ──────────────────────────────────────────────────────────── */
@@ -315,6 +327,65 @@
 }
 .dark .aic-promo:hover {
   border-color: oklch(0.72 0.15 60 / 45%);
+}
+
+/* ─── Hero dot grid ─────────────────────────────────────────────────── */
+.hero-grid {
+  background-image: radial-gradient(oklch(0.5 0 0 / 4%) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.dark .hero-grid {
+  background-image: radial-gradient(oklch(1 0 0 / 3%) 1px, transparent 1px);
+}
+
+/* ─── Prompt box focus glow ─────────────────────────────────────────── */
+.prompt-box-focused {
+  box-shadow: 0 0 0 1px oklch(0.78 0.14 65 / 30%), 0 0 24px -4px oklch(0.78 0.14 65 / 15%);
+  border-color: oklch(0.78 0.14 65 / 25%);
+}
+
+/* ─── Image reveal animation ────────────────────────────────────────── */
+@keyframes reveal-shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position: 200% 0; }
+}
+@keyframes image-reveal {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.animate-image-reveal {
+  animation: image-reveal 0.4s ease-out both;
+}
+.image-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 40%, oklch(1 0 0 / 8%) 50%, transparent 60%);
+  background-size: 200% 100%;
+  animation: reveal-shimmer 0.8s ease-out;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* ─── Task-colored skeleton shimmers ────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton-shimmer-violet {
+  background: linear-gradient(90deg, oklch(0.2 0 0 / 30%) 0%, oklch(0.3 0.05 280 / 20%) 50%, oklch(0.2 0 0 / 30%) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+.skeleton-shimmer-sky {
+  background: linear-gradient(90deg, oklch(0.2 0 0 / 30%) 0%, oklch(0.3 0.05 230 / 20%) 50%, oklch(0.2 0 0 / 30%) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+.skeleton-shimmer-emerald {
+  background: linear-gradient(90deg, oklch(0.2 0 0 / 30%) 0%, oklch(0.3 0.05 155 / 20%) 50%, oklch(0.2 0 0 / 30%) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

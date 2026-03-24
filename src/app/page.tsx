@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { HomePromptBox } from "@/components/sections/home-prompt-box";
+import { PlatformStatsBar } from "@/components/sections/platform-stats-bar";
 import { GalleryGrid } from "@/components/gallery/gallery-grid";
 
 export default function HomePage() {
@@ -8,12 +9,13 @@ export default function HomePage() {
     <div className="min-h-screen">
 
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
-      <section className="relative flex flex-col items-center overflow-hidden px-4 pt-20 pb-10 sm:pt-28 sm:px-6 lg:px-8">
+      <section className="hero-grid relative flex flex-col items-center overflow-hidden px-4 pt-20 pb-10 sm:pt-28 sm:px-6 lg:px-8">
 
         {/* Ambient orbs */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-          <div className="absolute left-1/3 -top-20 size-[560px] -translate-x-1/2 rounded-full bg-primary/6 blur-[120px] animate-drift" />
-          <div className="absolute right-1/4 top-0 size-[400px] translate-x-1/2 rounded-full bg-primary/4 blur-[100px] animate-drift delay-300" />
+          <div className="absolute left-1/3 -top-20 size-[560px] -translate-x-1/2 rounded-full bg-primary/12 blur-[120px] animate-drift" />
+          <div className="absolute right-1/4 top-0 size-[400px] translate-x-1/2 rounded-full bg-primary/8 blur-[100px] animate-drift" style={{ animationDuration: "12s", animationDelay: "0.3s" }} />
+          <div className="absolute left-1/2 top-1/3 size-[320px] -translate-x-1/2 rounded-full bg-violet-500/6 blur-[100px] animate-drift" style={{ animationDuration: "7s", animationDelay: "1.5s" }} />
         </div>
 
         <div className="relative w-full max-w-2xl text-center">
@@ -27,7 +29,7 @@ export default function HomePage() {
           </div>
 
           {/* Headline */}
-          <h1 className="animate-fade-in-up delay-75 text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
+          <h1 className="animate-fade-in-up delay-75 text-5xl font-black tracking-[-0.03em] text-foreground sm:text-6xl">
             Pay-per-use AI inference.
           </h1>
 
@@ -41,10 +43,10 @@ export default function HomePage() {
           {/* CTAs */}
           <div className="animate-fade-in-up delay-200 mt-7 flex flex-wrap items-center justify-center gap-3">
             <Link
-              href="/inference"
+              href="/inference/text-to-image"
               className="brand-cta inline-flex h-10 items-center gap-2 rounded-full px-6 text-sm font-medium transition-all duration-200"
             >
-              Run Inference
+              Generate Image
               <span className="text-xs opacity-60">→</span>
             </Link>
             <Link
@@ -62,12 +64,21 @@ export default function HomePage() {
               ["USDC", "on-chain settlement"],
               ["EIP-3009", "transferWithAuthorization"],
             ].map(([value, label]) => (
-              <div key={value} className="flex items-baseline gap-1.5">
+              <div key={value} className="group flex items-baseline gap-1.5 cursor-default">
                 <span className="font-mono text-sm font-semibold text-foreground">{value}</span>
-                <span className="text-xs text-muted-foreground/60">{label}</span>
+                <span className="text-xs text-muted-foreground/60 transition-colors group-hover:text-muted-foreground">{label}</span>
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ── Platform stats ─────────────────────────────────────────────── */}
+      <section className="px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl">
+          <Suspense fallback={null}>
+            <PlatformStatsBar />
+          </Suspense>
         </div>
       </section>
 
