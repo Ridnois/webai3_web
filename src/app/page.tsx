@@ -1,8 +1,10 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { Sparkles, Images, ArrowRight } from "lucide-react";
 import { HomePromptBox } from "@/components/sections/home-prompt-box";
 import { PlatformStatsBar } from "@/components/sections/platform-stats-bar";
 import { GalleryGrid } from "@/components/gallery/gallery-grid";
+import { HowItWorksSection } from "@/components/sections/how-it-works-section";
 
 export default function HomePage() {
   return (
@@ -44,15 +46,16 @@ export default function HomePage() {
           <div className="animate-fade-in-up delay-200 mt-7 flex flex-wrap items-center justify-center gap-3">
             <Link
               href="/inference/text-to-image"
-              className="brand-cta inline-flex h-10 items-center gap-2 rounded-full px-6 text-sm font-medium transition-all duration-200"
+              className="brand-cta inline-flex h-11 items-center gap-2.5 rounded-full px-7 text-sm font-semibold tracking-wide transition-all duration-200"
             >
+              <Sparkles className="size-4 shrink-0" />
               Generate Image
-              <span className="text-xs opacity-60">→</span>
             </Link>
             <Link
               href="/gallery"
-              className="brand-ghost inline-flex h-10 items-center gap-2 rounded-full px-6 text-sm font-medium transition-all duration-200"
+              className="brand-ghost inline-flex h-11 items-center gap-2.5 rounded-full px-6 text-sm font-medium tracking-wide transition-all duration-200"
             >
+              <Images className="size-4 shrink-0 opacity-70" />
               Browse Gallery
             </Link>
           </div>
@@ -110,9 +113,10 @@ export default function HomePage() {
             <div className="h-px flex-1 bg-border/50" />
             <Link
               href="/gallery"
-              className="text-xs text-muted-foreground/60 transition-colors hover:text-foreground"
+              className="inline-flex items-center gap-1.5 rounded-full border border-border/60 px-3 py-1 text-xs font-medium text-muted-foreground transition-all hover:border-foreground/20 hover:text-foreground hover:gap-2"
             >
-              View all →
+              View all
+              <ArrowRight className="size-3 shrink-0" />
             </Link>
           </div>
 
@@ -123,10 +127,13 @@ export default function HomePage() {
               </div>
             }
           >
-            <GalleryGrid />
+            <GalleryGrid embedded />
           </Suspense>
         </div>
       </section>
+
+      {/* ── How it works ──────────────────────────────────────────────────── */}
+      <HowItWorksSection />
 
     </div>
   );

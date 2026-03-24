@@ -69,15 +69,17 @@ export function ConnectDialog({ open, onOpenChange }: ConnectDialogProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="rounded-lg bg-blue-50 dark:bg-blue-950 p-3 flex gap-2 text-sm text-blue-900 dark:text-blue-100">
-          <AlertCircle className="size-4 mt-0.5 flex-shrink-0" />
-          <div>
-            <p>
-              Your wallet will be prompted to add and switch to <strong>{defaultChain.name}</strong>.
-            </p>
-            <p className="text-xs mt-1 opacity-80">Chain ID: {defaultChain.id}</p>
+        {defaultChain.id === 11155111 && (
+          <div className="rounded-lg bg-blue-50 dark:bg-blue-950 p-3 flex gap-2 text-sm text-blue-900 dark:text-blue-100">
+            <AlertCircle className="size-4 mt-0.5 flex-shrink-0" />
+            <div>
+              <p>
+                Your wallet will be prompted to add and switch to <strong>{defaultChain.name}</strong>.
+              </p>
+              <p className="text-xs mt-1 opacity-80">Chain ID: {defaultChain.id}</p>
+            </div>
           </div>
-        </div>
+        )}
 
         {switchError && (
           <div className="rounded-lg bg-amber-50 dark:bg-amber-950 p-3 flex gap-2 text-sm text-amber-900 dark:text-amber-100">

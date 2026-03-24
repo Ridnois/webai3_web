@@ -56,12 +56,11 @@ const FILTERS = [
   { value: "text-to-sound", label: "Audio", icon: AudioLines },
 ] as const;
 
-// ─── Cards ────────────────────────────────────────────────────────────────────
+// ─── Full cards (masonry / grid) ──────────────────────────────────────────────
 
 function ImageCard({ item, onClick }: { item: GalleryItem; onClick: () => void }) {
   const url = item.mediaUrls?.[0];
   if (!url) return null;
-
   return (
     <button
       type="button"
@@ -159,6 +158,57 @@ function TextCard({ item, onClick }: { item: GalleryItem; onClick: () => void })
   );
 }
 
+// ─── Compact cards (horizontal scroll on mobile, embedded) ────────────────────
+
+function CompactImageCard({ item, onClick }: { item: GalleryItem; onClick: () => void }) {
+  const url = item.mediaUrls?.[0];
+  if (!url) return null;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="block w-28 shrink-0 overflow-hidden rounded-xl active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+    >
+      <img
+        src={url}
+        alt=""
+        className="w-28 aspect-[3/4] object-cover block"
+        loading="lazy"
+      />
+    </button>
+  );
+}
+
+function CompactAudioCard({ item, onClick }: { item: GalleryItem; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-28 shrink-0 aspect-[3/4] flex-col items-center justify-center gap-2 rounded-xl border bg-card active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+    >
+      <div className="flex size-10 items-center justify-center rounded-full bg-violet-500/12 text-violet-600 dark:text-violet-400">
+        <AudioLines className="size-5" />
+      </div>
+      <p className="text-[10px] text-muted-foreground">{timeAgo(item.createdAt)}</p>
+    </button>
+  );
+}
+
+function CompactTextCard({ item, onClick }: { item: GalleryItem; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-28 shrink-0 aspect-[3/4] flex-col items-center justify-center gap-2 rounded-xl border bg-card active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+    >
+      <div className="flex size-10 items-center justify-center rounded-full bg-primary/8 text-primary">
+        <MessageSquareText className="size-5" />
+      </div>
+      <p className="text-[10px] text-muted-foreground">{timeAgo(item.createdAt)}</p>
+    </button>
+  );
+}
+
 // ─── Lightbox ─────────────────────────────────────────────────────────────────
 
 function NavArrow({ dir, onClick }: { dir: "l" | "r"; onClick: () => void }) {
@@ -216,21 +266,19 @@ function Lightbox({
         showCloseButton={false}
         className={
           isImage
-            ? "max-w-5xl max-h-[95dvh] overflow-hidden p-0 gap-0 bg-black border-white/5 rounded-xl"
-            : "max-w-2xl max-h-[90dvh] overflow-hidden p-0 gap-0 rounded-xl"
+            ? "max-w-5xl max-h-[100dvh] sm:max-h-[95dvh] overflow-hidden p-0 gap-0 bg-black border-white/5 rounded-none sm:rounded-xl w-full"
+            : "max-w-lg max-h-[100dvh] sm:max-h-[90dvh] overflow-hidden p-0 gap-0 rounded-none sm:rounded-xl w-full"
         }
         onKeyDown={(e) => {
           if (e.key === "ArrowLeft" && hasPrev) onPrev();
           if (e.key === "ArrowRight" && hasNext) onNext();
         }}
       >
-        <DialogTitle className="sr-only">
-          {item.taskType} result
-        </DialogTitle>
+        <DialogTitle className="sr-only">{item.taskType} result</DialogTitle>
 
         {/* ── Image ── */}
         {isImage && mediaUrl && (
-          <div className="flex flex-col max-h-[95dvh]">
+          <div className="flex flex-col max-h-[100dvh] sm:max-h-[95dvh]">
             {/* Close */}
             <button
               type="button"
@@ -244,11 +292,11 @@ function Lightbox({
             {hasNext && <NavArrow dir="r" onClick={onNext} />}
 
             {/* Image */}
-            <div className="flex flex-1 items-center justify-center bg-black min-h-0 px-2 py-2 sm:px-10 sm:py-4">
+            <div className="flex flex-1 items-center justify-center bg-black min-h-0 px-2 py-10 sm:px-10 sm:py-4">
               <img
                 src={mediaUrl}
                 alt=""
-                className="max-h-[65dvh] max-w-full object-contain rounded"
+                className="max-h-[60dvh] sm:max-h-[65dvh] max-w-full object-contain rounded"
               />
             </div>
 
@@ -301,7 +349,11 @@ function Lightbox({
           <div className="flex flex-col">
             <div className="flex items-center justify-between px-5 pt-5 pb-3">
               <p className="text-sm font-medium">Audio</p>
-              <button type="button" onClick={onClose} className="flex size-8 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex size-8 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition"
+              >
                 <X className="size-4" />
               </button>
             </div>
@@ -316,13 +368,20 @@ function Lightbox({
                 </audio>
               </div>
               <p className="text-sm text-foreground/80 leading-relaxed">{prompt}</p>
-              <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+              <div className="flex items-center justify-between text-[11px] text-muted-foreground flex-wrap gap-2">
                 <span>{model} &middot; {shortAddr(item.userAddress)}</span>
                 <div className="flex items-center gap-2">
-                  <a href={mediaUrl} download className="inline-flex items-center gap-1 rounded-full border px-3 py-1 hover:bg-muted transition">
+                  <a
+                    href={mediaUrl}
+                    download
+                    className="inline-flex items-center gap-1 rounded-full border px-3 py-1.5 hover:bg-muted transition"
+                  >
                     <Download className="size-3" /> Save
                   </a>
-                  <Link href={`/r/${item.id}`} className="inline-flex items-center gap-1 rounded-full border px-3 py-1 hover:bg-muted transition">
+                  <Link
+                    href={`/r/${item.id}`}
+                    className="inline-flex items-center gap-1 rounded-full border px-3 py-1.5 hover:bg-muted transition"
+                  >
                     <Link2 className="size-3" /> Link
                   </Link>
                 </div>
@@ -333,10 +392,14 @@ function Lightbox({
 
         {/* ── Text ── */}
         {item.outputType === "text" && textOutput && (
-          <div className="flex flex-col max-h-[90dvh]">
+          <div className="flex flex-col max-h-[100dvh] sm:max-h-[90dvh]">
             <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
               <p className="text-sm font-medium">Text</p>
-              <button type="button" onClick={onClose} className="flex size-8 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex size-8 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition"
+              >
                 <X className="size-4" />
               </button>
             </div>
@@ -354,9 +417,12 @@ function Lightbox({
               </pre>
             </div>
 
-            <div className="shrink-0 border-t px-5 py-3 flex items-center justify-between text-[11px] text-muted-foreground">
+            <div className="shrink-0 border-t px-5 py-3 flex items-center justify-between text-[11px] text-muted-foreground flex-wrap gap-2">
               <span>{model} &middot; {shortAddr(item.userAddress)}</span>
-              <Link href={`/r/${item.id}`} className="inline-flex items-center gap-1 rounded-full border px-3 py-1 hover:bg-muted transition">
+              <Link
+                href={`/r/${item.id}`}
+                className="inline-flex items-center gap-1 rounded-full border px-3 py-1.5 hover:bg-muted transition"
+              >
                 <Link2 className="size-3" /> Link
               </Link>
             </div>
@@ -392,9 +458,19 @@ function GallerySkeleton() {
   );
 }
 
+function EmbeddedMobileSkeleton() {
+  return (
+    <div className="flex gap-2.5">
+      {[..."12345"].map((_, i) => (
+        <Skeleton key={i} className="w-28 shrink-0 aspect-[3/4] rounded-xl" />
+      ))}
+    </div>
+  );
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-export function GalleryGrid() {
+export function GalleryGrid({ embedded = false }: { embedded?: boolean }) {
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [filter, setFilter] = useState("all");
   const [page, setPage] = useState(1);
@@ -425,88 +501,140 @@ export function GalleryGrid() {
   }
 
   const prev = useCallback(() => setFocusIdx((i) => (i !== null && i > 0 ? i - 1 : i)), []);
-  const next = useCallback(() => setFocusIdx((i) => (i !== null && i < items.length - 1 ? i + 1 : i)), [items.length]);
+  const next = useCallback(
+    () => setFocusIdx((i) => (i !== null && i < items.length - 1 ? i + 1 : i)),
+    [items.length]
+  );
 
   const firstLoad = isLoading && items.length === 0;
   const empty = !isLoading && items.length === 0;
 
   return (
     <div>
-      {/* Header — sticky on mobile for quick filter access */}
-      <div className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur-sm px-4 py-4 sm:static sm:border-0 sm:bg-transparent sm:backdrop-blur-none sm:px-6 sm:py-10 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <h1 className="hidden sm:block text-3xl font-bold tracking-tight mb-6">
-            Gallery
-          </h1>
-          <div className="flex gap-1.5 sm:gap-2 overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
-            {FILTERS.map(({ value, label, icon: Icon }) => (
-              <button
-                key={value}
-                onClick={() => changeFilter(value)}
-                className={`shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium rounded-full transition-colors ${
-                  filter === value
-                    ? "bg-foreground text-background"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                }`}
-              >
-                {Icon && <Icon className="size-3.5" />}
-                {label}
-              </button>
-            ))}
+      {/* Filter header — hidden when embedded (homepage provides its own header) */}
+      {!embedded && (
+        <div className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur-sm px-4 py-4 sm:static sm:border-0 sm:bg-transparent sm:backdrop-blur-none sm:px-6 sm:py-10 lg:px-8">
+          <div className="mx-auto max-w-7xl">
+            <h1 className="hidden sm:block text-3xl font-bold tracking-tight mb-6">Gallery</h1>
+            <div className="flex gap-1.5 sm:gap-2 overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
+              {FILTERS.map(({ value, label, icon: Icon }) => (
+                <button
+                  key={value}
+                  onClick={() => changeFilter(value)}
+                  className={`shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium rounded-full transition-colors ${
+                    filter === value
+                      ? "bg-foreground text-background"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+                >
+                  {Icon && <Icon className="size-3.5" />}
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Grid */}
-      <div className="mx-auto max-w-7xl px-4 pt-6 pb-16 sm:px-6 sm:pt-8 lg:px-8">
-        {firstLoad && (
-          <div className="columns-2 gap-3 sm:columns-3 sm:gap-4 lg:columns-4">
-            <GallerySkeleton />
-          </div>
-        )}
-
+      {/* Content */}
+      <div className={embedded ? "" : "mx-auto max-w-7xl px-4 pt-6 pb-16 sm:px-6 sm:pt-8 lg:px-8"}>
         {empty && (
-          <p className="py-24 text-center text-sm text-muted-foreground">
-            Nothing here yet
-          </p>
+          <p className="py-12 text-center text-sm text-muted-foreground">Nothing here yet</p>
         )}
 
-        {items.length > 0 && (
-          <div className="columns-2 gap-3 sm:columns-3 sm:gap-4 lg:columns-4">
-            {items.map((item, idx) => {
-              const card =
-                item.outputType === "image" ? (
-                  <ImageCard key={item.id} item={item} onClick={() => setFocusIdx(idx)} />
-                ) : item.outputType === "audio" ? (
-                  <AudioCard key={item.id} item={item} onClick={() => setFocusIdx(idx)} />
-                ) : (
-                  <TextCard key={item.id} item={item} onClick={() => setFocusIdx(idx)} />
-                );
-              return (
-                <div key={item.id} className="break-inside-avoid mb-3 sm:mb-4">
-                  {card}
+        {/* ── Embedded layout ── */}
+        {embedded && (
+          <>
+            {/* Mobile: horizontal scroll */}
+            <div className="sm:hidden">
+              {firstLoad ? (
+                <div className="flex gap-2.5 overflow-x-auto scrollbar-none -mx-4 px-4 pb-1">
+                  <EmbeddedMobileSkeleton />
                 </div>
-              );
-            })}
-          </div>
+              ) : (
+                <div className="flex gap-2.5 overflow-x-auto scrollbar-none -mx-4 px-4 pb-1">
+                  {items.map((item, idx) => (
+                    <div key={item.id} className="shrink-0">
+                      {item.outputType === "image" ? (
+                        <CompactImageCard item={item} onClick={() => setFocusIdx(idx)} />
+                      ) : item.outputType === "audio" ? (
+                        <CompactAudioCard item={item} onClick={() => setFocusIdx(idx)} />
+                      ) : (
+                        <CompactTextCard item={item} onClick={() => setFocusIdx(idx)} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Desktop: masonry */}
+            <div className="hidden sm:block">
+              {firstLoad && (
+                <div className="columns-3 gap-4 lg:columns-4">
+                  <GallerySkeleton />
+                </div>
+              )}
+              {items.length > 0 && (
+                <div className="columns-3 gap-4 lg:columns-4">
+                  {items.map((item, idx) => (
+                    <div key={item.id} className="break-inside-avoid mb-4">
+                      {item.outputType === "image" ? (
+                        <ImageCard item={item} onClick={() => setFocusIdx(idx)} />
+                      ) : item.outputType === "audio" ? (
+                        <AudioCard item={item} onClick={() => setFocusIdx(idx)} />
+                      ) : (
+                        <TextCard item={item} onClick={() => setFocusIdx(idx)} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
         )}
 
-        {/* Load more */}
-        {hasMore && !loadingMore && (
-          <div className="mt-10 flex justify-center">
-            <Button
-              variant="outline"
-              onClick={() => { setLoadingMore(true); setPage((p) => p + 1); }}
-            >
-              Load more
-            </Button>
-          </div>
-        )}
+        {/* ── Full gallery layout ── */}
+        {!embedded && (
+          <>
+            {firstLoad && (
+              <div className="columns-2 gap-3 sm:columns-3 sm:gap-4 lg:columns-4">
+                <GallerySkeleton />
+              </div>
+            )}
+            {items.length > 0 && (
+              <div className="columns-2 gap-3 sm:columns-3 sm:gap-4 lg:columns-4">
+                {items.map((item, idx) => (
+                  <div key={item.id} className="break-inside-avoid mb-3 sm:mb-4">
+                    {item.outputType === "image" ? (
+                      <ImageCard item={item} onClick={() => setFocusIdx(idx)} />
+                    ) : item.outputType === "audio" ? (
+                      <AudioCard item={item} onClick={() => setFocusIdx(idx)} />
+                    ) : (
+                      <TextCard item={item} onClick={() => setFocusIdx(idx)} />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
 
-        {loadingMore && (
-          <div className="mt-6 columns-2 gap-3 sm:columns-3 sm:gap-4 lg:columns-4">
-            <GallerySkeleton />
-          </div>
+            {hasMore && !loadingMore && (
+              <div className="mt-10 flex justify-center">
+                <Button
+                  variant="outline"
+                  onClick={() => { setLoadingMore(true); setPage((p) => p + 1); }}
+                >
+                  Load more
+                </Button>
+              </div>
+            )}
+
+            {loadingMore && (
+              <div className="mt-6 columns-2 gap-3 sm:columns-3 sm:gap-4 lg:columns-4">
+                <GallerySkeleton />
+              </div>
+            )}
+          </>
         )}
       </div>
 

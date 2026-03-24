@@ -408,7 +408,13 @@ export function HomePromptBox() {
   return (
     <div className="w-full space-y-3">
       {/* Composer card */}
-      <div className={cn("glass overflow-hidden rounded-2xl transition-shadow duration-200", isFocused && "prompt-box-focused")}>
+      <div className={cn(
+        "glass overflow-hidden rounded-2xl transition-all duration-300",
+        "shadow-[0_0_32px_-8px_oklch(0.78_0.14_65_/_25%),0_0_64px_-16px_oklch(0.72_0.18_280_/_15%)]",
+        isFocused
+          ? "shadow-[0_0_40px_-6px_oklch(0.78_0.14_65_/_50%),0_0_80px_-20px_oklch(0.72_0.18_280_/_30%)] prompt-box-focused"
+          : "hover:shadow-[0_0_36px_-8px_oklch(0.78_0.14_65_/_35%),0_0_72px_-18px_oklch(0.72_0.18_280_/_20%)]"
+      )}>
         {/* Task tabs */}
         <div className="relative flex gap-1 border-b border-black/[0.06] dark:border-white/[0.06] px-2 pt-2">
           {TASKS.map(({ id, label, icon: Icon }) => (
@@ -497,7 +503,7 @@ export function HomePromptBox() {
 
       {/* Suggestion chips */}
       {!result && !isLoading && (
-        <div className="flex gap-2 overflow-x-auto scrollbar-none -mx-4 px-4 sm:flex-wrap sm:mx-0 sm:px-0 sm:overflow-visible">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
           {SUGGESTIONS.map((s) => {
             const Icon =
               TASKS.find((t) => t.id === s.task)?.icon ?? ImagePlus;
@@ -506,10 +512,12 @@ export function HomePromptBox() {
                 key={s.label}
                 type="button"
                 onClick={() => applySuggestion(s)}
-                className="flex items-center gap-1.5 rounded-full border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.03] px-3.5 py-1.5 text-sm text-muted-foreground transition-all duration-150 hover:border-primary/40 hover:text-foreground hover:bg-primary/5"
+                className="flex items-center gap-2 rounded-xl border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.03] px-3 py-2.5 text-left text-sm text-muted-foreground transition-all duration-150 hover:border-primary/40 hover:text-foreground hover:bg-primary/5 sm:rounded-full sm:py-1.5 sm:px-3.5"
               >
-                <Icon className="size-3 shrink-0 text-primary/60" />
-                {s.label}
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-primary/8 sm:size-auto sm:rounded-none sm:bg-transparent sm:p-0">
+                  <Icon className="size-3.5 text-primary/70 sm:size-3 sm:text-primary/60" />
+                </span>
+                <span className="leading-tight">{s.label}</span>
               </button>
             );
           })}

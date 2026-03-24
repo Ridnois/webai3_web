@@ -79,9 +79,14 @@ export function SiteFooter() {
           </div>
         </div>
         <Separator className="my-8" />
-        <p className="text-center text-sm text-muted-foreground">
-          &copy; {year} WEBAI3. All rights reserved.
-        </p>
+        <div className="flex flex-col items-center gap-1.5">
+          <p className="text-center text-sm text-muted-foreground">
+            &copy; {year} WEBAI3. All rights reserved.
+          </p>
+          <p className="font-mono text-[10px] text-muted-foreground/40 tracking-wide">
+            made with ♥ by Ridnois Labs
+          </p>
+        </div>
       </div>
     </footer>
   );
