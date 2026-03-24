@@ -14,7 +14,7 @@ import { useWalletBalances } from "@/hooks/use-wallet-balances";
 import { getUsdcConfig } from "@/lib/contracts";
 import { defaultChain } from "@/lib/wagmi";
 
-export function WalletDetails() {
+export function WalletDetails({ status = "connected" }: { status?: "connected" | "connecting" | "disconnected" }) {
   const { address, chain } = useAccount();
   const { disconnect } = useDisconnect();
   const { switchChain, isPending: isSwitching } = useSwitchChain();
@@ -63,7 +63,19 @@ export function WalletDetails() {
           className="gap-2"
           aria-label="Wallet menu"
         >
-          <Wallet className="size-4" />
+          <span className="relative inline-flex">
+            <Wallet className="size-4" />
+            <span
+              className={`absolute -right-1.5 -top-1.5 inline-flex size-2 rounded-full ring-[1.5px] ring-background ${
+                status === "connected"
+                  ? "bg-[oklch(0.58_0.16_155)] dark:bg-[oklch(0.72_0.14_155)]"
+                  : status === "connecting"
+                    ? "bg-[oklch(0.72_0.14_70)] dark:bg-[oklch(0.80_0.12_70)]"
+                    : "bg-[oklch(0.60_0.20_25)] dark:bg-[oklch(0.68_0.18_22)]"
+              }`}
+              aria-label={`Wallet ${status}`}
+            />
+          </span>
           <span className="hidden sm:inline">{displayAddress}</span>
           <ChevronDown className="size-3 opacity-50" />
         </Button>
