@@ -50,7 +50,7 @@ function timeAgo(dateStr: string) {
 }
 
 const FILTERS = [
-  { value: "all", label: "All" },
+  { value: "all", label: "All", icon: undefined },
   { value: "text-to-image", label: "Images", icon: ImagePlus },
   { value: "text-to-text", label: "Text", icon: MessageSquareText },
   { value: "text-to-sound", label: "Audio", icon: AudioLines },

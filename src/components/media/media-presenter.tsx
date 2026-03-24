@@ -322,7 +322,7 @@ export function MediaPresenter({
   const isImage = item.outputType === "image";
   const isAudio = item.outputType === "audio";
   const mediaUrl = item.mediaUrls?.[0];
-  const prompt = item.input?.prompt;
+  const prompt = typeof item.input?.prompt === "string" ? item.input.prompt : undefined;
 
   // Thumbnail variant - compact grid display
   if (variant === "thumbnail") {
