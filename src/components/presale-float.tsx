@@ -58,7 +58,7 @@ export function PresaleFloat() {
       )}
     >
       <a
-        href={`${LANDING_URL}#presale`}
+        href={LANDING_URL}
         target="_blank"
         rel="noopener noreferrer"
         className="aic-promo group flex items-center gap-3 rounded-xl px-3.5 py-2.5 transition-all duration-200 hover:scale-[1.02]"
