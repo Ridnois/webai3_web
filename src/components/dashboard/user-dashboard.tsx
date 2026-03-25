@@ -14,7 +14,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { InferenceHistoryCard } from "@/components/history/inference-history-card";
 import { OutputLightbox } from "@/components/output/output-lightbox";
 import { AuthGuardScreen } from "@/components/auth/auth-guard-screen";
 import { fromHistoryItem } from "@/types/output-item";
@@ -125,6 +124,50 @@ function MediaGridItem({
         {item.status}
       </Badge>
     </div>
+  );
+}
+
+function RecentActivityItem({ item }: { item: InferenceHistoryItem }) {
+  const Icon = TASK_ICONS[item.taskType] ?? MessageSquareText;
+  const label = TASK_LABELS[item.taskType] ?? item.taskType;
+  const variant = STATUS_VARIANT[item.status] ?? "secondary";
+  const timeAgo = formatTimeAgo(new Date(item.createdAt));
+
+  return (
+    <Link href={`/history/${item.id}`}>
+      <div className="group rounded-lg border bg-card p-3 sm:p-4 transition-all hover:border-primary/30 hover:shadow-sm">
+        <div className="flex items-start gap-3">
+          {/* Icon */}
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+            <Icon className="size-4" />
+          </div>
+
+          {/* Content */}
+          <div className="min-w-0 flex-1">
+            {/* Title + Status badge row */}
+            <div className="flex items-center gap-2 mb-1">
+              <p className="text-xs sm:text-sm font-medium truncate">{label}</p>
+              <Badge variant={variant} className="shrink-0 text-[10px]">
+                {item.status}
+              </Badge>
+            </div>
+
+            {/* Model */}
+            <p className="text-xs text-muted-foreground truncate mb-2">
+              {item.model.split("/").pop()}
+            </p>
+
+            {/* Bottom row: time + prediction ms */}
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>{timeAgo}</span>
+              {item.predictTimeMs && (
+                <span>{(item.predictTimeMs / 1000).toFixed(1)}s</span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </Link>
   );
 }
 
@@ -363,12 +406,12 @@ export function UserDashboard() {
             <CardTitle className="text-lg">Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {recentItems
                 .filter((i) => i.outputType !== "image")
-                .slice(0, 5)
+                .slice(0, 6)
                 .map((item) => (
-                  <InferenceHistoryCard key={item.id} item={item} />
+                  <RecentActivityItem key={item.id} item={item} />
                 ))}
             </div>
           </CardContent>
