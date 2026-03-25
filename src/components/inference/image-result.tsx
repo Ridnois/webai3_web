@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { extractImageUrls } from "@/lib/output-helpers";
+import { ErrorAlert } from "@/components/ui/error-alert";
 
 interface ImageResultProps {
   output: unknown;
@@ -13,9 +14,7 @@ export function ImageResult({ output }: ImageResultProps) {
 
   if (urls.length === 0) {
     return (
-      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-        Unable to extract images from the model output.
-      </div>
+      <ErrorAlert>Unable to extract images from the model output.</ErrorAlert>
     );
   }
 

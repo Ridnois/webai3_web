@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Play, Pause, Download, Volume2, VolumeX } from "lucide-react";
 import { extractAudioUrl } from "@/lib/output-helpers";
+import { ErrorAlert } from "@/components/ui/error-alert";
 
 interface AudioResultProps {
   output: unknown;
@@ -77,9 +78,7 @@ export function AudioResult({ output }: AudioResultProps) {
 
   if (!url) {
     return (
-      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-        Unable to extract audio from the model output.
-      </div>
+      <ErrorAlert>Unable to extract audio from the model output.</ErrorAlert>
     );
   }
 

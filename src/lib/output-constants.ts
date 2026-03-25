@@ -39,6 +39,12 @@ export function shortAddr(addr: string): string {
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 }
 
+export const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive"> = {
+  succeeded: "default",
+  pending: "secondary",
+  failed: "destructive",
+};
+
 export function getPrompt(input: Record<string, unknown> | undefined | null): string | null {
   if (input && typeof input.prompt === "string") return input.prompt;
   return null;

@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { formatUsdc } from "@/lib/pricing";
-import { TASK_LABELS } from "@/lib/output-constants";
+import { TASK_LABELS, STATUS_VARIANT } from "@/lib/output-constants";
 import { TextResult } from "@/components/inference/text-result";
 import { ImageResult } from "@/components/inference/image-result";
 import { AudioResult } from "@/components/inference/audio-result";
 import { OutputActions } from "@/components/output/output-actions";
+import { ErrorAlert } from "@/components/ui/error-alert";
 import { OutputLightbox } from "@/components/output/output-lightbox";
 import { Badge } from "@/components/ui/badge";
 import type { OutputItem } from "@/types/output-item";
@@ -59,9 +60,7 @@ export function OutputView({
   // ── Error state ─────────────────────────────────────────────────────────────
   if (item.status === "failed" && item.errorMessage) {
     return (
-      <div className={cn("rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive", className)}>
-        {item.errorMessage}
-      </div>
+      <ErrorAlert className={className}>{item.errorMessage}</ErrorAlert>
     );
   }
 
@@ -231,15 +230,7 @@ export function OutputView({
             />
           )}
           {item.status && (
-            <Badge
-              variant={
-                item.status === "succeeded"
-                  ? "default"
-                  : item.status === "failed"
-                    ? "destructive"
-                    : "secondary"
-              }
-            >
+            <Badge variant={STATUS_VARIANT[item.status] ?? "secondary"}>
               {item.status}
             </Badge>
           )}

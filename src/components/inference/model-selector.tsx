@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useModels } from "@/hooks/use-models";
+import { ErrorAlert } from "@/components/ui/error-alert";
 import type { TaskType, ReplicateModel } from "@/types/inference";
 import { ChevronDown, Search } from "lucide-react";
 
@@ -74,9 +75,7 @@ export function ModelSelector({
 
   if (error) {
     return (
-      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-        Failed to load models: {error.message}
-      </div>
+      <ErrorAlert>Failed to load models: {error.message}</ErrorAlert>
     );
   }
 

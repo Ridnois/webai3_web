@@ -5,10 +5,12 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Globe } from "lucide-react";
+import { BackButton } from "@/components/layout/back-button";
+import { Globe } from "lucide-react";
 import { TASK_ICONS, TASK_LABELS, shortAddr } from "@/lib/output-constants";
 import { fromGalleryItem } from "@/types/output-item";
 import { OutputView } from "@/components/output/output-view";
+import { PageContainer } from "@/components/layout/page-container";
 import type { GalleryItem } from "@/hooks/use-gallery";
 
 async function fetchPublicResult(id: string): Promise<GalleryItem> {
@@ -35,15 +37,8 @@ export function PublicResultView({ id }: PublicResultViewProps) {
   const item = data ? fromGalleryItem(data) : null;
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-6">
-        <Button variant="ghost" size="sm" asChild>
-          <Link href="/gallery">
-            <ArrowLeft className="size-4" />
-            Back to Gallery
-          </Link>
-        </Button>
-      </div>
+    <PageContainer maxWidth="4xl">
+      <BackButton href="/gallery" label="Back to Gallery" />
 
       {isLoading && (
         <div className="space-y-4">
@@ -104,6 +99,6 @@ export function PublicResultView({ id }: PublicResultViewProps) {
           </div>
         </>
       )}
-    </div>
+    </PageContainer>
   );
 }

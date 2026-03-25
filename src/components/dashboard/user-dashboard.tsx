@@ -16,11 +16,10 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InferenceHistoryCard } from "@/components/history/inference-history-card";
 import { OutputLightbox } from "@/components/output/output-lightbox";
-import { ConnectSignInButton } from "@/components/auth/connect-sign-in-button";
+import { AuthGuardScreen } from "@/components/auth/auth-guard-screen";
 import { fromHistoryItem } from "@/types/output-item";
-import { TASK_LABELS, TASK_ICONS, formatTimeAgo } from "@/lib/output-constants";
+import { TASK_LABELS, TASK_ICONS, STATUS_VARIANT, formatTimeAgo } from "@/lib/output-constants";
 import {
-  Shield,
   LayoutDashboard,
   TrendingUp,
   MessageSquareText,
@@ -120,7 +119,7 @@ function MediaGridItem({
 
       {/* Status badge */}
       <Badge
-        variant={item.status === "succeeded" ? "default" : item.status === "failed" ? "destructive" : "secondary"}
+        variant={STATUS_VARIANT[item.status] ?? "secondary"}
         className="absolute top-2 right-2 text-xs z-20"
       >
         {item.status}
@@ -176,18 +175,12 @@ export function UserDashboard() {
 
   if (!isAuthenticated) {
     return (
-      <div className="flex flex-col items-center gap-4 py-16 sm:py-24 text-center px-4">
-        <div className="flex size-12 sm:size-16 items-center justify-center rounded-full bg-primary/10">
-          <Shield className="size-6 sm:size-8 text-primary" />
-        </div>
-        <div>
-          <p className="text-lg sm:text-xl font-semibold">Sign in to view your dashboard</p>
-          <p className="text-sm text-muted-foreground mt-2">
-            Connect your wallet and sign in to see your inference metrics and recent work
-          </p>
-        </div>
-        <ConnectSignInButton className="mt-2" />
-      </div>
+      <AuthGuardScreen
+        iconSize="lg"
+        title="Sign in to view your dashboard"
+        subtitle="Connect your wallet and sign in to see your inference metrics and recent work"
+        className="flex flex-col items-center gap-4 py-16 sm:py-24 text-center px-4"
+      />
     );
   }
 

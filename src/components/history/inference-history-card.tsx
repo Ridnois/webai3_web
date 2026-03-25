@@ -5,17 +5,10 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useShareInference } from "@/hooks/use-share-inference";
-import { toastSuccess, toastError } from "@/lib/toast";
-import { TASK_ICONS, TASK_LABELS, formatTimeAgo, getPrompt } from "@/lib/output-constants";
+import { useShareInference, shareToggleCallbacks } from "@/hooks/use-share-inference";
+import { TASK_ICONS, TASK_LABELS, STATUS_VARIANT, formatTimeAgo, getPrompt } from "@/lib/output-constants";
 import { Play, Pause, MessageSquareText } from "lucide-react";
 import type { InferenceHistoryItem } from "@/hooks/use-inference-history";
-
-const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive"> = {
-  succeeded: "default",
-  pending: "secondary",
-  failed: "destructive",
-};
 
 function InlineAudioPlayer({ url }: { url: string }) {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -77,22 +70,7 @@ export function InferenceHistoryCard({ item }: InferenceHistoryCardProps) {
     e.stopPropagation();
     shareMutation.mutate(
       { id: item.id, isPublic: !isPublic },
-      {
-        onSuccess: (result) => {
-          toastSuccess(
-            result.isPublic ? "Shared to gallery" : "Removed from gallery",
-            result.isPublic
-              ? "Anyone with the link can now view this result."
-              : "This result is now private and hidden from the gallery."
-          );
-        },
-        onError: (err) => {
-          toastError("Sharing failed", {
-            description: err.message,
-            hint: "Check your connection and try again.",
-          });
-        },
-      }
+      shareToggleCallbacks(),
     );
   }
 

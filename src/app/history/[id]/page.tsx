@@ -1,18 +1,17 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import Link from "next/link";
 import { useInferenceDetail } from "@/hooks/use-inference-detail";
-import { useShareInference } from "@/hooks/use-share-inference";
+import { useShareInference, shareToggleCallbacks } from "@/hooks/use-share-inference";
 import { useAuth } from "@/hooks/use-auth";
 import { fromInferenceDetail } from "@/types/output-item";
 import { OutputView } from "@/components/output/output-view";
-import { ConnectSignInButton } from "@/components/auth/connect-sign-in-button";
+import { AuthGuardScreen } from "@/components/auth/auth-guard-screen";
+import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, Shield } from "lucide-react";
-import { toastSuccess, toastError } from "@/lib/toast";
+import { ErrorAlert } from "@/components/ui/error-alert";
+import { BackButton } from "@/components/layout/back-button";
 
 export default function InferenceDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -22,37 +21,29 @@ export default function InferenceDetailPage() {
 
   if (authLoading || isLoading) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
+      <PageContainer maxWidth="3xl">
         <Skeleton className="mb-4 h-8 w-48" />
         <Skeleton className="h-64 w-full rounded-lg" />
-      </div>
+      </PageContainer>
     );
   }
 
   if (!isAuthenticated) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="flex flex-col items-center gap-4 rounded-lg border p-8 text-center">
-          <Shield className="size-10 text-muted-foreground/60" />
-          <div>
-            <p className="text-base font-medium">Sign in to view this inference</p>
-            <p className="text-sm text-muted-foreground">
-              Your history is tied to your signed wallet session.
-            </p>
-          </div>
-          <ConnectSignInButton />
-        </div>
-      </div>
+      <PageContainer maxWidth="3xl">
+        <AuthGuardScreen
+          title="Sign in to view this inference"
+          subtitle="Your history is tied to your signed wallet session."
+        />
+      </PageContainer>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-          {error?.message ?? "Inference not found"}
-        </div>
-      </div>
+      <PageContainer maxWidth="3xl">
+        <ErrorAlert>{error?.message ?? "Inference not found"}</ErrorAlert>
+      </PageContainer>
     );
   }
 
@@ -62,35 +53,13 @@ export default function InferenceDetailPage() {
     if (!data) return;
     shareMutation.mutate(
       { id: data.id, isPublic: !(data.isPublic === 1) },
-      {
-        onSuccess: (result) => {
-          toastSuccess(
-            result.isPublic ? "Shared to gallery" : "Removed from gallery",
-            result.isPublic
-              ? "Anyone with the link can now view this result."
-              : "This result is now private and hidden from the gallery."
-          );
-        },
-        onError: (err) => {
-          toastError("Sharing failed", {
-            description: err.message,
-            hint: "Check your connection and try again.",
-          });
-        },
-      }
+      shareToggleCallbacks(),
     );
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-6">
-        <Button variant="ghost" size="sm" asChild>
-          <Link href="/history">
-            <ArrowLeft className="size-4" />
-            Back to History
-          </Link>
-        </Button>
-      </div>
+    <PageContainer maxWidth="3xl">
+      <BackButton href="/history" label="Back to History" />
 
       <div className="flex flex-col gap-6">
         <OutputView
@@ -115,6 +84,6 @@ export default function InferenceDetailPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </PageContainer>
   );
 }

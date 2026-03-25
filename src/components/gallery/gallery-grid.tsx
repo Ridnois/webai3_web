@@ -14,6 +14,7 @@ import { useGallery } from "@/hooks/use-gallery";
 import { getPrompt, shortTimeAgo } from "@/lib/output-constants";
 import { fromGalleryItem } from "@/types/output-item";
 import { OutputLightbox } from "@/components/output/output-lightbox";
+import { EmptyState } from "@/components/ui/empty-state";
 import type { GalleryItem } from "@/hooks/use-gallery";
 
 // ─── Filters ─────────────────────────────────────────────────────────────────
@@ -283,9 +284,7 @@ export function GalleryGrid({ embedded = false }: { embedded?: boolean }) {
 
       {/* Content */}
       <div className={embedded ? "" : "mx-auto max-w-7xl px-4 pt-6 pb-16 sm:px-6 sm:pt-8 lg:px-8"}>
-        {empty && (
-          <p className="py-12 text-center text-sm text-muted-foreground">Nothing here yet</p>
-        )}
+        {empty && <EmptyState title="Nothing here yet" />}
 
         {/* ── Embedded layout ── */}
         {embedded && (

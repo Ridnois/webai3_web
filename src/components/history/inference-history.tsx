@@ -4,10 +4,12 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useInferenceHistory } from "@/hooks/use-inference-history";
 import { InferenceHistoryCard } from "./inference-history-card";
-import { ConnectSignInButton } from "@/components/auth/connect-sign-in-button";
+import { AuthGuardScreen } from "@/components/auth/auth-guard-screen";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Shield, History } from "lucide-react";
+import { ErrorAlert } from "@/components/ui/error-alert";
+import { EmptyState } from "@/components/ui/empty-state";
+import { History } from "lucide-react";
 
 export function InferenceHistory() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -26,18 +28,11 @@ export function InferenceHistory() {
 
   if (!isAuthenticated) {
     return (
-      <div className="flex flex-col items-center gap-4 py-16 text-center">
-        <Shield className="size-12 text-muted-foreground/50" />
-        <div>
-          <p className="text-sm font-medium text-muted-foreground">
-            Sign in to view your history
-          </p>
-          <p className="text-xs text-muted-foreground/75 mt-1">
-            Connect your wallet and sign in to see your past inferences
-          </p>
-        </div>
-        <ConnectSignInButton />
-      </div>
+      <AuthGuardScreen
+        iconSize="lg"
+        title="Sign in to view your history"
+        subtitle="Connect your wallet and sign in to see your past inferences"
+      />
     );
   }
 
@@ -53,9 +48,7 @@ export function InferenceHistory() {
 
   if (history.error) {
     return (
-      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-        Failed to load history. Please try again.
-      </div>
+      <ErrorAlert>Failed to load history. Please try again.</ErrorAlert>
     );
   }
 
@@ -63,17 +56,11 @@ export function InferenceHistory() {
 
   if (items.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-3 py-16 text-center">
-        <History className="size-12 text-muted-foreground/50" />
-        <div>
-          <p className="text-sm font-medium text-muted-foreground">
-            No inferences yet
-          </p>
-          <p className="text-xs text-muted-foreground/75 mt-1">
-            Run your first inference to see it here
-          </p>
-        </div>
-      </div>
+      <EmptyState
+        icon={History}
+        title="No inferences yet"
+        subtitle="Run your first inference to see it here"
+      />
     );
   }
 
