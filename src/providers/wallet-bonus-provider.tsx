@@ -4,7 +4,6 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useWalletBalances } from "@/hooks/use-wallet-balances";
 import { useGrantFreeInferences } from "@/hooks/use-grant-free-inferences";
-import confetti from "canvas-confetti";
 import { toastSuccess } from "@/lib/toast";
 
 export function WalletBonusProvider({ children }: { children: ReactNode }) {
@@ -54,17 +53,19 @@ export function WalletBonusProvider({ children }: { children: ReactNode }) {
     fireConfetti();
   }
 
-  function fireConfetti() {
+  async function fireConfetti() {
+    const module = await import("canvas-confetti");
+    const confetti = (module as unknown as { default: () => void }).default || (module as any);
+
     const duration = 2600;
     const end = Date.now() + duration;
     const defaults = { spread: 80, ticks: 200, gravity: 0.9, origin: { y: 0.65 } };
 
-    // Initial burst from both sides
-    confetti({ particleCount: 80, angle: 60, startVelocity: 35, origin: { x: 0, y: 0.7 } });
-    confetti({ particleCount: 80, angle: 120, startVelocity: 35, origin: { x: 1, y: 0.7 } });
+    confetti({ particleCount: 90, angle: 60, startVelocity: 40, origin: { x: 0, y: 0.7 } });
+    confetti({ particleCount: 90, angle: 120, startVelocity: 40, origin: { x: 1, y: 0.7 } });
 
     (function frame() {
-      confetti({ particleCount: 24, scalar: 0.95, ...defaults });
+      confetti({ particleCount: 28, scalar: 1, ...defaults });
       if (Date.now() < end) requestAnimationFrame(frame);
     })();
   }
