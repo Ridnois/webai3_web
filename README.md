@@ -2,7 +2,7 @@
 
 A Web3-native AI inference platform where users authenticate with their Ethereum wallet and pay per inference using USDC via the [x402 payment protocol](https://www.x402.org/). No subscriptions, no accounts — connect your wallet, run a model, pay only for what you use.
 
-Built on **Base** (Coinbase L2), powered by **Replicate** for model execution, **Cloudflare R2** for permanent media storage, and **x402** for trustless USDC payments.
+Built on **Ethereum** (Mainnet + Sepolia), powered by **Replicate** for model execution, **Cloudflare R2** for permanent media storage, and **x402** for trustless USDC payments.
 
 ---
 
@@ -11,7 +11,7 @@ Built on **Base** (Coinbase L2), powered by **Replicate** for model execution, *
 | Feature | Description |
 |---|---|
 | Wallet authentication | Sign-In With Ethereum (SIWE / EIP-4361) — no passwords |
-| x402 USDC payments | Pay-per-inference with USDC on Base via Coinbase x402 facilitator |
+| x402 USDC payments | Pay-per-inference with USDC on Ethereum via x402 facilitator |
 | Settlement before compute | Payment is settled on-chain before inference runs — no free rides |
 | Cost estimation | Upfront cost estimates before running a model |
 | Free inferences | New wallets with USDC balance receive 5 free runs on first connection |
@@ -26,9 +26,9 @@ Built on **Base** (Coinbase L2), powered by **Replicate** for model execution, *
 | User dashboard | Personal stats — total inferences, spend, usage breakdown |
 | Admin dashboard | Platform-wide metrics and usage monitoring |
 | Permanent media storage | Images and audio stored on Cloudflare R2 with permanent public URLs |
-| USDC balance display | ETH + USDC balance on Base visible in the wallet panel |
+| USDC balance display | ETH + USDC balance on Ethereum visible in the wallet panel |
 | On-chain receipts | Every inference has a settlement transaction hash for transparency |
-| Local dev chain | Anvil fork of Base Sepolia for local development |
+| Local dev chain | Anvil fork of Ethereum Sepolia for local development |
 
 ---
 
@@ -40,7 +40,7 @@ Built on **Base** (Coinbase L2), powered by **Replicate** for model execution, *
 | Language | TypeScript (strict) |
 | Styling | Tailwind CSS v4, shadcn/ui (New York), Geist font |
 | Web3 | Wagmi v2, viem, SIWE |
-| Payments | x402 protocol (EIP-3009 transferWithAuthorization), USDC on Base |
+| Payments | x402 protocol (EIP-3009 transferWithAuthorization), USDC on Ethereum |
 | Server state | TanStack React Query v5 |
 | Validation | Zod |
 | Database | PostgreSQL + Drizzle ORM |
@@ -49,7 +49,7 @@ Built on **Base** (Coinbase L2), powered by **Replicate** for model execution, *
 | Media storage | Cloudflare R2 (S3-compatible, public bucket) |
 | Testing | Vitest, Testing Library, jsdom |
 | Package manager | pnpm |
-| Networks | Base Mainnet (8453), Base Sepolia (84532), Anvil local (31337) |
+| Networks | Ethereum Mainnet (1), Ethereum Sepolia (11155111), Anvil local (31337) |
 
 ---
 
@@ -124,7 +124,7 @@ src/
 │   ├── model-discovery.ts            # Replicate model discovery
 │   ├── inference-utils.ts            # Inference processing utilities
 │   ├── inference-error.ts            # Structured inference error handling
-│   ├── wagmi.ts                      # Chain config (Base, Base Sepolia, Anvil)
+│   ├── wagmi.ts                      # Chain config (Ethereum, Ethereum Sepolia, Anvil)
 │   ├── contracts.ts                  # USDC contract addresses per chain
 │   ├── session.ts                    # iron-session config
 │   ├── replicate.ts                  # Replicate SDK singleton
@@ -244,8 +244,8 @@ Optional client-side variables:
 
 | Variable | Description |
 |---|---|
-| `NEXT_PUBLIC_BASE_RPC_URL` | Custom Base Mainnet RPC (falls back to public) |
-| `NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL` | Custom Base Sepolia RPC (falls back to public) |
+| `NEXT_PUBLIC_ETHEREUM_RPC_URL` | Custom Ethereum Mainnet RPC (falls back to public) |
+| `NEXT_PUBLIC_SEPOLIA_RPC_URL` | Custom Ethereum Sepolia RPC (falls back to public) |
 | `NEXT_PUBLIC_ENABLE_DEV_CHAIN` | Set `true` to enable local Anvil chain (chainId 31337) |
 
 All server variables are validated with Zod on startup — the app will throw listing any missing ones.
@@ -267,14 +267,14 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ### 5. (Optional) Local dev chain
 
-For local development without using Base Sepolia testnet:
+For local development without using Ethereum Sepolia testnet:
 
 ```bash
-pnpm chain:start   # Start Anvil fork of Base Sepolia
+pnpm chain:start   # Start Anvil fork of Ethereum Sepolia
 pnpm chain:fund    # Fund test wallets with USDC
 ```
 
-Set `NEXT_PUBLIC_ENABLE_DEV_CHAIN=true` in `.env` to enable the local chain in the UI. Note: the x402 facilitator does not support local Anvil chains — payment settlement is mocked with random transaction hashes. Use Base Sepolia for testing real payments end-to-end.
+Set `NEXT_PUBLIC_ENABLE_DEV_CHAIN=true` in `.env` to enable the local chain in the UI. Note: the x402 facilitator does not support local Anvil chains — payment settlement is mocked with random transaction hashes. Use Ethereum Sepolia for testing real payments end-to-end.
 
 ---
 
@@ -397,7 +397,7 @@ pnpm db:push          # Push schema directly (dev only, skips migrations)
 pnpm db:studio        # Open Drizzle Studio (database browser)
 
 # Local dev chain
-pnpm chain:start      # Start Anvil fork of Base Sepolia
+pnpm chain:start      # Start Anvil fork of Ethereum Sepolia
 pnpm chain:fund       # Fund test wallets with USDC
 
 # UI components

@@ -44,7 +44,7 @@ describe("caip2ToChainId", () => {
   });
 
   it("returns undefined for unknown CAIP-2", () => {
-    expect(caip2ToChainId("eip155:8453")).toBeUndefined();
+    expect(caip2ToChainId("eip155:10")).toBeUndefined();
   });
 });
 

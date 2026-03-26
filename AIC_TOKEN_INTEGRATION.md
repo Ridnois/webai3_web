@@ -157,7 +157,7 @@ interface IAICStaking {
 }
 ```
 
-The contract should be deployed on Base (same network as inference payments). The address becomes a new env var `NEXT_PUBLIC_AIC_STAKING_ADDRESS` (client) and `AIC_STAKING_ADDRESS` (if needed server-side).
+The contract should be deployed on Ethereum (same network as inference payments). The address becomes a new env var `NEXT_PUBLIC_AIC_STAKING_ADDRESS` (client) and `AIC_STAKING_ADDRESS` (if needed server-side).
 
 ### 2.3 Discount Tiers
 
@@ -185,12 +185,12 @@ interface AicConfig {
 }
 
 const aicContracts: Record<number, AicConfig> = {
-  [base.id]: {
+  [mainnet.id]: {
     tokenAddress: "0x<MAINNET_AIC_ADDRESS>",
     stakingAddress: "0x<MAINNET_STAKING_ADDRESS>",
     decimals: 18,
   },
-  [baseSepolia.id]: {
+  [sepolia.id]: {
     tokenAddress: "0x<SEPOLIA_AIC_ADDRESS>",
     stakingAddress: "0x<SEPOLIA_STAKING_ADDRESS>",
     decimals: 18,
@@ -269,7 +269,7 @@ The server must read the staked balance on-chain before computing the discounted
 
 ```ts
 import { createPublicClient, http, erc20Abi } from "viem";
-import { base, baseSepolia } from "viem/chains";
+import { mainnet, sepolia } from "viem/chains";
 import type { Address } from "viem";
 import { getServerEnv } from "./server-env";
 
@@ -290,10 +290,10 @@ export async function readStakedAic(
   const env = getServerEnv();
   if (!env.AIC_STAKING_ADDRESS) return 0;
 
-  const chain = chainId === base.id ? base : baseSepolia;
-  const rpcUrl = chainId === base.id
-    ? process.env.NEXT_PUBLIC_BASE_RPC_URL
-    : process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL;
+  const chain = chainId === mainnet.id ? mainnet : sepolia;
+  const rpcUrl = chainId === mainnet.id
+    ? process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL
+    : process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL;
 
   const client = createPublicClient({ chain, transport: http(rpcUrl) });
 
@@ -446,7 +446,7 @@ Upgrade the `WebAI3Token` contract to also inherit `ERC20WithAuthorization` (a c
 
 AIC is not a stablecoin. The server needs an AIC/USD exchange rate to express inference costs in AIC. Rate sources (in order of preference):
 
-1. **On-chain TWAP** from a Uniswap v3 AIC/USDC pool on Base (most decentralized, gas-free reads)
+1. **On-chain TWAP** from a Uniswap v3 AIC/USDC pool on Ethereum (most decentralized, gas-free reads)
 2. **Off-chain price API** (CoinGecko, CoinMarketCap) — simpler but introduces centralization
 3. **Fixed admin-set rate** via env var `AIC_USDC_RATE` — simplest for early rollout
 
@@ -732,11 +732,11 @@ The user's effective rate limit tier is derived from their highest qualifying mo
 
 ### Client (`src/lib/env.ts`)
 ```
-NEXT_PUBLIC_BASE_RPC_URL
-NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL
+NEXT_PUBLIC_ETHEREUM_RPC_URL
+NEXT_PUBLIC_SEPOLIA_RPC_URL
 NEXT_PUBLIC_ENABLE_DEV_CHAIN
-NEXT_PUBLIC_AIC_TOKEN_ADDRESS        # Tier 1 — AIC token address on Base
-NEXT_PUBLIC_AIC_STAKING_ADDRESS      # Tier 1 — staking contract address on Base
+NEXT_PUBLIC_AIC_TOKEN_ADDRESS        # Tier 1 — AIC token address on Ethereum
+NEXT_PUBLIC_AIC_STAKING_ADDRESS      # Tier 1 — staking contract address on Ethereum
 ```
 
 ### Server (`src/lib/server-env.ts`)

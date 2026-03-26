@@ -13,7 +13,7 @@ export function SiteFooter() {
           <div className="col-span-2 md:col-span-1">
             <Logo />
             <p className="mt-3 text-sm text-muted-foreground">
-              Wallet-authenticated AI inference with x402 payments and USDC settlement on Base.
+              Wallet-authenticated AI inference with x402 payments and USDC settlement on Ethereum.
             </p>
           </div>
 
@@ -49,8 +49,8 @@ export function SiteFooter() {
                 </a>
               </li>
               <li>
-                <a href="https://base.org" target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-foreground">
-                  Base L2
+                <a href="https://ethereum.org" target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-foreground">
+                  Ethereum
                 </a>
               </li>
               <li>

@@ -292,8 +292,6 @@ POST /api/auth/logout  → destroy session
 
 - **Ethereum Mainnet** (chainId: 1)
 - **Ethereum Sepolia** (chainId: 11155111)
-- **Base Mainnet** (chainId: 8453)
-- **Base Sepolia** (chainId: 84532)
 - **Anvil** (chainId: 31337, local dev only — payment settlement is mocked)
 
 Do not add new networks without updating `src/lib/wagmi.ts` and `src/lib/contracts.ts`.
@@ -345,8 +343,6 @@ Client → POST /api/inference (with Payment-Signature header)
 ```
 NEXT_PUBLIC_ETHEREUM_RPC_URL
 NEXT_PUBLIC_SEPOLIA_RPC_URL
-NEXT_PUBLIC_BASE_RPC_URL
-NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL
 NEXT_PUBLIC_ENABLE_DEV_CHAIN
 NEXT_PUBLIC_TARGET_CHAIN_ID      # default: 11155111 (Sepolia)
 NEXT_PUBLIC_LANDING_URL          # default: https://webai3.app

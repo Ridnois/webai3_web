@@ -1,6 +1,6 @@
 # Local Testing — USDC Payments on Anvil
 
-Test the full USDC payment flow locally using a forked Base Sepolia chain.
+Test the full USDC payment flow locally using a forked Ethereum Sepolia chain.
 
 ## Prerequisites
 
@@ -32,12 +32,12 @@ In a **separate terminal**:
 pnpm chain:start
 ```
 
-This forks Base Sepolia into a local Anvil node at `http://127.0.0.1:8545` with chainId `31337`. The USDC contract from Base Sepolia (`0x036CbD53842c5426634e7929541eC2318f3dCF7e`) is available on the fork.
+This forks Ethereum Sepolia into a local Anvil node at `http://127.0.0.1:8545` with chainId `31337`. The USDC contract from Ethereum Sepolia (`0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238`) is available on the fork.
 
 You can override the fork URL:
 
 ```bash
-BASE_SEPOLIA_FORK_URL=https://your-rpc-url pnpm chain:start
+SEPOLIA_FORK_URL=https://your-rpc-url pnpm chain:start
 ```
 
 ### 3. Fund test accounts with USDC
@@ -83,7 +83,7 @@ Address:     0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
 To see USDC in MetaMask, import the token:
 
 ```
-Token address: 0x036CbD53842c5426634e7929541eC2318f3dCF7e
+Token address: 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238
 Decimals:      6
 ```
 
@@ -152,4 +152,4 @@ foundryup
 
 ### USDC balance shows 0 after funding
 
-Make sure MetaMask is connected to the Anvil network (chainId 31337), not Base Sepolia (84532). They use the same USDC contract address but are different chains.
+Make sure MetaMask is connected to the Anvil network (chainId 31337), not Ethereum Sepolia (11155111). They use the same USDC contract address but are different chains.
