@@ -115,11 +115,11 @@ export function WalletButton() {
       <Button
         size="sm"
         onClick={handleOneClickConnect}
-        className="hidden items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm font-semibold sm:inline-flex"
+        className="hidden items-center gap-2 rounded-md border border-primary/40 bg-transparent px-3 py-2 text-sm font-semibold text-foreground hover:bg-primary/5 sm:inline-flex"
         disabled={connecting}
       >
-        <WalletIcon status={status} className="size-3.5 text-muted-foreground" />
-        {connecting ? "Connecting…" : "Connect & Sign In"}
+        <WalletIcon status={status} className="size-3.5 text-primary" />
+        {connecting ? "Connecting…" : "Connect"}
       </Button>
       <ConnectDialog open={dialogOpen} onOpenChange={setDialogOpen} />
     </>
