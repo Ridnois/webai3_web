@@ -11,7 +11,7 @@ const DISMISS_KEY = "aic_promo_dismissed_until";
 const DISMISS_DAYS = 3;
 const SHOW_DELAY_MS = 3500;
 
-const ALLOWED_PATHS = ["/dashboard", "/inference"];
+const ALLOWED_PATHS = ["/dashboard", "/inference", "/"];
 
 export function PresaleFloat() {
   const pathname = usePathname();
