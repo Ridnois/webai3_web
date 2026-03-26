@@ -8,7 +8,6 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { Web3Provider } from "@/providers/web3-provider";
 import { WalletBonusProvider } from "@/providers/wallet-bonus-provider";
 import { PresaleFloat } from "@/components/presale-float";
-import { FreeCreditFloatHome } from "@/components/sections/free-credit-float-home";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -41,9 +40,6 @@ export default function RootLayout({
           <Web3Provider>
             <WalletBonusProvider>
               <SiteHeader />
-              <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                <FreeCreditFloatHome />
-              </div>
               <main>{children}</main>
               <SiteFooter />
               <PresaleFloat />

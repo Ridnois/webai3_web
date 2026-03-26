@@ -28,6 +28,7 @@ import { formatUsdc, usdcToOnChainAmount } from "@/lib/pricing";
 import { toastInferenceError, toastInsufficientFunds } from "@/lib/toast";
 import type { TaskType, ReplicateModel } from "@/types/inference";
 import { ModelTierPill } from "@/components/sections/model-tier-pill";
+import { useFreeCreditStatus } from "@/hooks/use-free-credit-status";
 
 const DEFAULT_MODEL_IDS: Record<TaskType, string> = {
   "text-to-image": "black-forest-labs/flux-schnell",
@@ -267,6 +268,7 @@ export function HomePromptBox() {
   const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [selectedModel, setSelectedModel] = useState<ReplicateModel | null>(null);
+  const { status: freeStatus, isLoading: freeLoading } = useFreeCreditStatus();
 
   // Auto-select default model when models load or task changes
   const { data: models } = useModels(task);
@@ -511,9 +513,22 @@ export function HomePromptBox() {
 
   const canSubmit = prompt.trim().length > 0 && !!selectedModel && !isLoading;
   const result = inference.result ?? submitMutation.data?.response;
+  const showFreeBanner =
+    !freeLoading &&
+    (!freeStatus || freeStatus.remainingCredit > 0);
+  const freeLabel = freeStatus
+    ? `${freeStatus.remainingCredit} free inference${freeStatus.remainingCredit === 1 ? "" : "s"} left`
+    : "5 free inferences for new users";
 
   return (
     <div className="w-full space-y-3">
+      {showFreeBanner && (
+        <div className="flex items-center gap-2 rounded-xl bg-emerald-500/12 px-3.5 py-2 text-xs font-semibold text-emerald-900 shadow-[0_12px_30px_-18px_rgba(16,185,129,0.45)] dark:text-emerald-50 dark:bg-emerald-500/18">
+          <Sparkles className="size-3.5" />
+          <span>{freeLabel}</span>
+        </div>
+      )}
+
       {/* Composer card */}
       <div className={cn(
         "glass overflow-hidden rounded-2xl transition-all duration-300",
