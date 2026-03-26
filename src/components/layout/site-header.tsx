@@ -2,18 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Menu, Sparkles, ArrowUpRight } from "lucide-react";
+import { Menu } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { NavLink } from "@/components/nav-link";
 import { WalletButton } from "@/components/wallet/wallet-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { useFreeCreditStatus } from "@/hooks/use-free-credit-status";
-import { useConnect } from "wagmi";
-import { useAuth as useAuthHook } from "@/hooks/use-auth";
-import { addAndSwitchToSepolia } from "@/lib/wallet-network";
-import { defaultChain } from "@/lib/wagmi";
 import {
   Sheet,
   SheetContent,
@@ -31,61 +26,6 @@ const authNav = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/history", label: "History" },
 ];
-
-function FreeCreditFloat() {
-  const { isAuthenticated } = useAuthHook();
-  const { status, isLoading } = useFreeCreditStatus();
-  const { connectors, connectAsync, isPending } = useConnect();
-  const { signIn } = useAuthHook();
-  const [isBusy, setIsBusy] = useState(false);
-  const [isVisible, setIsVisible] = useState(true);
-
-  const quickConnector =
-    connectors.find((c) => c.ready) ??
-    connectors.find((c) => c.id === "injected") ??
-    connectors[0];
-
-  const show =
-    isVisible &&
-    !isLoading &&
-    (!status || status.remainingCredit > 0) &&
-    (!isAuthenticated || (status ? status.remainingCredit > 0 : true));
-
-  async function handleClick() {
-    if (!quickConnector) return;
-    setIsBusy(true);
-    try {
-      const res = await connectAsync({ connector: quickConnector });
-      if (res.chainId !== defaultChain.id && defaultChain.id === 11155111) {
-        await addAndSwitchToSepolia();
-      }
-      await signIn();
-      setIsVisible(false); // hide once claimed/connected
-    } catch (e) {
-      console.error("[free-credit-float] connect failed", e);
-    } finally {
-      setIsBusy(false);
-    }
-  }
-
-  if (!show) return null;
-
-  return (
-    <button
-      onClick={handleClick}
-      disabled={isBusy || isPending}
-      className="group absolute -left-56 hidden items-center gap-2 rounded-full border border-indigo-400/60 bg-gradient-to-r from-indigo-500/75 via-fuchsia-500/75 to-amber-400/75 px-3.5 py-2 text-[11px] font-semibold text-white shadow-[0_16px_40px_-18px_rgba(59,130,246,0.45)] transition hover:-translate-y-[2px] hover:shadow-[0_18px_46px_-16px_rgba(244,114,182,0.5)] sm:flex animate-[floatPulse_3s_ease-in-out_infinite]"
-      style={{ filter: "saturate(1.05)" }}
-      aria-label="Claim free inferences"
-    >
-      <Sparkles className="size-4 shrink-0 drop-shadow" />
-      <span className="whitespace-nowrap drop-shadow">
-        {status?.remainingCredit ? `${status.remainingCredit} free left` : "Claim 5 free runs"}
-      </span>
-      <ArrowUpRight className="size-4 shrink-0 transition group-hover:translate-x-[2px]" />
-    </button>
-  );
-}
 
 export function SiteHeader() {
   const { isAdmin, isAuthenticated } = useAuth();
@@ -122,7 +62,6 @@ export function SiteHeader() {
 
         <div className="relative flex items-center gap-2">
           <ThemeToggle className="hidden sm:flex" />
-          {mounted && <FreeCreditFloat />}
           <WalletButton />
 
           {mounted && (

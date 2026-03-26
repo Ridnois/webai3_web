@@ -5,6 +5,7 @@ import { HomePromptBox } from "@/components/sections/home-prompt-box";
 import { PlatformStatsBar } from "@/components/sections/platform-stats-bar";
 import { GalleryGrid } from "@/components/gallery/gallery-grid";
 import { HowItWorksSection } from "@/components/sections/how-it-works-section";
+import { FreeCreditFloatHome } from "@/components/sections/free-credit-float-home";
 
 export default function HomePage() {
   return (
@@ -20,9 +21,12 @@ export default function HomePage() {
             </span>
           </div>
 
-          <h1 className="animate-fade-in-up delay-50 text-4xl font-black tracking-[-0.02em] text-foreground sm:text-5xl">
-            Run an AI inference in seconds.
-          </h1>
+          <div className="relative">
+            <FreeCreditFloatHome />
+            <h1 className="animate-fade-in-up delay-50 text-4xl font-black tracking-[-0.02em] text-foreground sm:text-5xl">
+              Run an AI inference in seconds.
+            </h1>
+          </div>
 
           <p className="animate-fade-in-up delay-100 text-base leading-relaxed text-muted-foreground sm:text-lg">
             Connect your wallet, pick a model, and get results. No accounts. No subscriptions.
