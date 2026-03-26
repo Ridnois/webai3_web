@@ -38,6 +38,7 @@ function FreeCreditFloat() {
   const { connectors, connectAsync, isPending } = useConnect();
   const { signIn } = useAuthHook();
   const [isBusy, setIsBusy] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
 
   const quickConnector =
     connectors.find((c) => c.ready) ??
@@ -45,6 +46,7 @@ function FreeCreditFloat() {
     connectors[0];
 
   const show =
+    isVisible &&
     !isLoading &&
     (!status || status.remainingCredit > 0) &&
     (!isAuthenticated || (status ? status.remainingCredit > 0 : true));
@@ -58,6 +60,7 @@ function FreeCreditFloat() {
         await addAndSwitchToSepolia();
       }
       await signIn();
+      setIsVisible(false); // hide once claimed/connected
     } catch (e) {
       console.error("[free-credit-float] connect failed", e);
     } finally {
@@ -71,17 +74,15 @@ function FreeCreditFloat() {
     <button
       onClick={handleClick}
       disabled={isBusy || isPending}
-      className="group absolute -left-48 hidden items-center gap-2 rounded-full border border-primary/30 bg-gradient-to-r from-primary/30 via-primary/20 to-primary/30 px-3 py-1.5 text-xs font-semibold text-primary shadow-[0_12px_32px_-18px] shadow-primary/40 transition hover:-translate-y-[1px] hover:shadow-[0_14px_32px_-16px] sm:flex"
+      className="group absolute -left-56 hidden items-center gap-2 rounded-full border border-indigo-400/60 bg-gradient-to-r from-indigo-500/75 via-fuchsia-500/75 to-amber-400/75 px-3.5 py-2 text-[11px] font-semibold text-white shadow-[0_16px_40px_-18px_rgba(59,130,246,0.45)] transition hover:-translate-y-[2px] hover:shadow-[0_18px_46px_-16px_rgba(244,114,182,0.5)] sm:flex animate-[floatPulse_3s_ease-in-out_infinite]"
+      style={{ filter: "saturate(1.05)" }}
       aria-label="Claim free inferences"
     >
-      <Sparkles className="size-4 shrink-0" />
-      <span className="whitespace-nowrap">
+      <Sparkles className="size-4 shrink-0 drop-shadow" />
+      <span className="whitespace-nowrap drop-shadow">
         {status?.remainingCredit ? `${status.remainingCredit} free left` : "Claim 5 free runs"}
       </span>
-      <ArrowUpRight className="size-4 shrink-0 transition group-hover:translate-x-[1px]" />
-      <span className="absolute -top-2 right-4 animate-pulse text-[10px] font-black uppercase tracking-[0.12em] text-amber-900">
-        Now
-      </span>
+      <ArrowUpRight className="size-4 shrink-0 transition group-hover:translate-x-[2px]" />
     </button>
   );
 }
