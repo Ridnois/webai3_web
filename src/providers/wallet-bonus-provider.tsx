@@ -4,7 +4,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useWalletBalances } from "@/hooks/use-wallet-balances";
 import { useGrantFreeInferences } from "@/hooks/use-grant-free-inferences";
-import { FreeInferencesCelebration } from "@/components/inference/free-inferences-celebration";
+import confetti from "canvas-confetti";
+import { toastSuccess } from "@/lib/toast";
 
 export function WalletBonusProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated, address, chainId } = useAuth();
@@ -28,7 +29,7 @@ export function WalletBonusProvider({ children }: { children: ReactNode }) {
         .then((res) => {
           if (res.granted) {
             setCreditAmount(res.creditAmount);
-            setShowCelebration(true);
+            triggerCelebration(res.creditAmount);
           }
         })
         .catch(() => {
@@ -48,14 +49,27 @@ export function WalletBonusProvider({ children }: { children: ReactNode }) {
     usdcRaw,
   ]);
 
+  function triggerCelebration(amount: number) {
+    toastSuccess("Free inferences unlocked", `${amount} runs are now free. They’ll auto-apply on your next inference.`);
+    fireConfetti();
+  }
+
+  function fireConfetti() {
+    const duration = 2500;
+    const end = Date.now() + duration;
+    (function frame() {
+      confetti({
+        particleCount: 60,
+        spread: 70,
+        origin: { y: 0.6 },
+        ticks: 160,
+        scalar: 0.9,
+      });
+      if (Date.now() < end) requestAnimationFrame(frame);
+    })();
+  }
+
   return (
-    <>
-      {children}
-      <FreeInferencesCelebration
-        creditAmount={creditAmount}
-        isOpen={showCelebration}
-        onClose={() => setShowCelebration(false)}
-      />
-    </>
+    <>{children}</>
   );
 }
