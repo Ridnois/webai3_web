@@ -54,15 +54,15 @@ export function FreeCreditFloatHome() {
     <button
       onClick={handleClick}
       disabled={isBusy || isPending}
-      className="group absolute right-2 top-2 flex items-center gap-2 rounded-full border border-cyan-200/70 bg-gradient-to-r from-indigo-500/80 via-fuchsia-500/80 to-amber-400/80 px-3.5 py-2 text-[11px] font-semibold text-white shadow-[0_16px_40px_-18px_rgba(59,130,246,0.5)] transition hover:-translate-y-[2px] hover:shadow-[0_18px_46px_-16px_rgba(244,114,182,0.55)] animate-[floatPulse_3s_ease-in-out_infinite]"
+      className="group absolute right-2 top-2 flex items-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-500/80 via-fuchsia-500/80 to-amber-400/80 px-3 py-1.5 text-[10px] font-semibold text-white shadow-[0_14px_34px_-18px_rgba(59,130,246,0.45)] transition hover:-translate-y-[2px] hover:shadow-[0_16px_38px_-16px_rgba(244,114,182,0.5)] animate-[floatPulse_2.6s_ease-in-out_infinite]"
       style={{ filter: "saturate(1.05)" }}
       aria-label="Claim free inferences"
     >
-      <Sparkles className="size-4 shrink-0 drop-shadow" />
+      <Sparkles className="size-3.5 shrink-0 drop-shadow" />
       <span className="whitespace-nowrap drop-shadow">
         {status?.remainingCredit ? `${status.remainingCredit} free left` : "Claim 5 free runs"}
       </span>
-      <ArrowUpRight className="size-4 shrink-0 transition group-hover:translate-x-[2px]" />
+      <ArrowUpRight className="size-3.5 shrink-0 transition group-hover:translate-x-[2px]" />
     </button>
   );
 }
