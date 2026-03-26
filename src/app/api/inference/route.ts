@@ -6,7 +6,7 @@ import { TASK_CONFIGS } from "@/types/task-config";
 import { requireAuth } from "@/lib/auth";
 import { getSession } from "@/lib/session";
 import { getDb } from "@/lib/db";
-import { inferences } from "@/lib/db/schema";
+import { freeInferenceGrants, inferences } from "@/lib/db/schema";
 import { uploadMediaToR2, getPublicUrls } from "@/lib/r2";
 import {
   normalizeOutput,
@@ -115,13 +115,22 @@ export async function POST(request: NextRequest) {
 
   const session = await getSession();
   const chainId = session.chainId ?? 11155111;
+  const db = getDb();
+
+  const [freeGrant] = await db
+    .select()
+    .from(freeInferenceGrants)
+    .where(eq(freeInferenceGrants.address, auth.address));
+
+  const hasFreeCredit =
+    freeGrant && freeGrant.usedCount < freeGrant.creditAmount;
 
   const paymentSignatureHeader = request.headers.get("Payment-Signature");
+  const shouldUseFreeCredit = Boolean(hasFreeCredit);
 
   // ─── Phase 1: No payment header → return 402 ───────────────────────────
 
-  if (!paymentSignatureHeader) {
-    const db = getDb();
+  if (!paymentSignatureHeader && !shouldUseFreeCredit) {
     const estSeconds = await historicalEstimateSeconds(db, model, task);
     const estimated = estimateCostUsdc(task, ratePerSec, estSeconds);
     const amountOnChain = usdcToOnChainAmount(estimated);
@@ -153,73 +162,78 @@ export async function POST(request: NextRequest) {
 
   // ─── Phase 2: Has payment header → SSE stream ──────────────────────────
 
-  let paymentPayload;
-  try {
-    paymentPayload = decodePaymentHeader(paymentSignatureHeader, paymentPayloadSchema);
-  } catch {
-    return NextResponse.json(
-      { error: "Invalid Payment-Signature header", code: "PAYMENT_INVALID" },
-      { status: 400 }
-    );
+  let paymentPayload = null;
+  if (paymentSignatureHeader && !shouldUseFreeCredit) {
+    try {
+      paymentPayload = decodePaymentHeader(paymentSignatureHeader, paymentPayloadSchema);
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid Payment-Signature header", code: "PAYMENT_INVALID" },
+        { status: 400 }
+      );
+    }
   }
 
-  const paymentRequirement = paymentPayload.accepted;
   const estimated = estimateCostUsdc(task, ratePerSec);
-  const db = getDb();
   const outputType = outputTypeForTask(task);
   const estimatedCost = estimated.toString();
 
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        // ── Verify ──────────────────────────────────────────────────────
-        if (!isLocalDevChain(chainId)) {
-          controller.enqueue(sseEvent({ phase: "verifying" }));
-          const verifyResult = await verifyWithFacilitator(paymentPayload, paymentRequirement);
-          if (!verifyResult.isValid) {
-            controller.enqueue(sseEvent({
-              phase: "error",
-              error: `Payment verification failed: ${verifyResult.invalidReason ?? "unknown"}`,
-              code: "PAYMENT_INVALID",
-            }));
-            controller.close();
-            return;
-          }
-        }
-
-        // ── Settle ──────────────────────────────────────────────────────
-        controller.enqueue(sseEvent({ phase: "settling" }));
+        const isFreeInference = shouldUseFreeCredit;
         let settlementTxHash: string | undefined;
         let settlementResponse;
+        const paymentRequirement = paymentPayload?.accepted;
 
-        if (isLocalDevChain(chainId)) {
-          settlementTxHash = `0x${crypto.randomUUID().replace(/-/g, "")}${crypto.randomUUID().replace(/-/g, "")}`;
-        } else {
-          try {
-            settlementResponse = await settleWithFacilitator(paymentPayload, paymentRequirement);
-            settlementTxHash = settlementResponse.transaction || undefined;
-          } catch (settleErr) {
-            const settleRaw = settleErr instanceof Error ? settleErr.message : "Settlement failed";
-            console.error("[api/inference] Settlement error:", settleRaw);
-            controller.enqueue(sseEvent({
-              phase: "error",
-              error: "Payment settlement failed. Please try again.",
-              code: "SETTLEMENT_FAILED",
-            }));
-            controller.close();
-            return;
+        if (!isFreeInference) {
+          // ── Verify ────────────────────────────────────────────────────
+          if (!isLocalDevChain(chainId)) {
+            controller.enqueue(sseEvent({ phase: "verifying" }));
+            const verifyResult = await verifyWithFacilitator(paymentPayload!, paymentRequirement!);
+            if (!verifyResult.isValid) {
+              controller.enqueue(sseEvent({
+                phase: "error",
+                error: `Payment verification failed: ${verifyResult.invalidReason ?? "unknown"}`,
+                code: "PAYMENT_INVALID",
+              }));
+              controller.close();
+              return;
+            }
           }
 
-          // Defensive: never proceed without a confirmed settlement tx
-          if (!settlementTxHash) {
-            console.error("[api/inference] Settlement returned no tx hash");
-            controller.enqueue(sseEvent({
-              phase: "error",
-              error: "Payment settlement failed. No transaction confirmed.",
-              code: "SETTLEMENT_FAILED",
-            }));
-            controller.close();
-            return;
+          // ── Settle ────────────────────────────────────────────────────
+          controller.enqueue(sseEvent({ phase: "settling" }));
+
+          if (isLocalDevChain(chainId)) {
+            settlementTxHash = `0x${crypto.randomUUID().replace(/-/g, "")}${crypto.randomUUID().replace(/-/g, "")}`;
+          } else {
+            try {
+              settlementResponse = await settleWithFacilitator(paymentPayload!, paymentRequirement!);
+              settlementTxHash = settlementResponse.transaction || undefined;
+            } catch (settleErr) {
+              const settleRaw = settleErr instanceof Error ? settleErr.message : "Settlement failed";
+              console.error("[api/inference] Settlement error:", settleRaw);
+              controller.enqueue(sseEvent({
+                phase: "error",
+                error: "Payment settlement failed. Please try again.",
+                code: "SETTLEMENT_FAILED",
+              }));
+              controller.close();
+              return;
+            }
+
+            // Defensive: never proceed without a confirmed settlement tx
+            if (!settlementTxHash) {
+              console.error("[api/inference] Settlement returned no tx hash");
+              controller.enqueue(sseEvent({
+                phase: "error",
+                error: "Payment settlement failed. No transaction confirmed.",
+                code: "SETTLEMENT_FAILED",
+              }));
+              controller.close();
+              return;
+            }
           }
         }
 
@@ -242,6 +256,12 @@ export async function POST(request: NextRequest) {
           console.error("[api/inference] Inference error:", rawMessage);
 
           try {
+            const failureCostFields = {
+              estimatedCostUsdc: isFreeInference ? "0" : estimatedCost,
+              paymentTxHash: isFreeInference ? null : settlementTxHash ?? null,
+              paymentChainId: isFreeInference ? null : chainId,
+              isFreeInference: isFreeInference ? 1 : 0,
+            };
             await db.insert(inferences).values({
               userAddress: auth.address,
               taskType: task,
@@ -250,9 +270,7 @@ export async function POST(request: NextRequest) {
               outputType,
               status: "failed",
               errorMessage: rawMessage,
-              estimatedCostUsdc: estimatedCost,
-              paymentTxHash: settlementTxHash ?? null,
-              paymentChainId: chainId,
+              ...failureCostFields,
             });
           } catch { /* don't mask original error */ }
 
@@ -269,20 +287,21 @@ export async function POST(request: NextRequest) {
 
         const predictTimeMs = Date.now() - startTime;
         const output = normalizeOutput(rawOutput);
-        const actualCost = actualCostUsdc(predictTimeMs, ratePerSec);
-        const actualCostStr = actualCost.toString();
+        const actualCost = isFreeInference ? 0 : actualCostUsdc(predictTimeMs, ratePerSec);
+        const actualCostStr = isFreeInference ? "0" : actualCost.toString();
 
         const costFields = {
-          estimatedCostUsdc: estimatedCost,
+          estimatedCostUsdc: isFreeInference ? "0" : estimatedCost,
           actualCostUsdc: actualCostStr,
-          paymentTxHash: settlementTxHash ?? null,
-          paymentChainId: chainId,
+          paymentTxHash: isFreeInference ? null : settlementTxHash ?? null,
+          paymentChainId: isFreeInference ? null : chainId,
+          isFreeInference: isFreeInference ? 1 : 0,
         };
 
         const costMetrics = {
           predictTimeMs,
-          estimatedCostUsdc: parseFloat(estimatedCost),
-          actualCostUsdc: actualCost,
+          estimatedCostUsdc: isFreeInference ? 0 : parseFloat(estimatedCost),
+          actualCostUsdc: isFreeInference ? 0 : actualCost,
         };
 
         const settlementBase64 = settlementResponse
@@ -337,6 +356,13 @@ export async function POST(request: NextRequest) {
               .set({ r2Keys, status: "succeeded" })
               .where(eq(inferences.id, record.id));
 
+            if (isFreeInference && freeGrant) {
+              await db
+                .update(freeInferenceGrants)
+                .set({ usedCount: freeGrant.usedCount + 1 })
+                .where(eq(freeInferenceGrants.id, freeGrant.id));
+            }
+
             const publicUrls = getPublicUrls(r2Keys);
             const responseOutput = publicUrls.length === 1 ? publicUrls[0] : publicUrls;
 
@@ -366,6 +392,13 @@ export async function POST(request: NextRequest) {
             ...costFields,
           })
           .returning({ id: inferences.id });
+
+        if (isFreeInference && freeGrant) {
+          await db
+            .update(freeInferenceGrants)
+            .set({ usedCount: freeGrant.usedCount + 1 })
+            .where(eq(freeInferenceGrants.id, freeGrant.id));
+        }
 
         controller.enqueue(sseEvent({
           phase: "done",

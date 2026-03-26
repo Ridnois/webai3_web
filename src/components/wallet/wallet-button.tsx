@@ -1,11 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, useConnect } from "wagmi";
 import { Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConnectDialog } from "@/components/wallet/connect-dialog";
 import { WalletDetails } from "@/components/wallet/wallet-details";
+import { addAndSwitchToSepolia } from "@/lib/wallet-network";
+import { defaultChain } from "@/lib/wagmi";
+import { useAuth } from "@/hooks/use-auth";
 
 type ConnectionStatus = "connected" | "connecting" | "disconnected";
 
@@ -53,14 +56,48 @@ function WalletIcon({
 
 export function WalletButton() {
   const { isConnected, isConnecting, isReconnecting } = useAccount();
+  const { connectors, connectAsync, isPending: isConnectPending } = useConnect();
+  const { signIn } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [isQuickConnecting, setIsQuickConnecting] = useState(false);
 
   const status: ConnectionStatus =
     isConnected ? "connected" : isConnecting || isReconnecting ? "connecting" : "disconnected";
 
+  const quickConnector =
+    connectors.find((c) => c.ready) ??
+    connectors.find((c) => c.id === "injected") ??
+    connectors[0];
+
+  async function handleOneClickConnect() {
+    if (!quickConnector) {
+      setDialogOpen(true);
+      return;
+    }
+
+    setIsQuickConnecting(true);
+    try {
+      const result = await connectAsync({ connector: quickConnector });
+
+      if (result.chainId !== defaultChain.id && defaultChain.id === 11155111) {
+        await addAndSwitchToSepolia();
+      }
+
+      await signIn();
+      setDialogOpen(false);
+    } catch (err) {
+      console.error("[wallet] quick connect failed:", err);
+      setDialogOpen(true);
+    } finally {
+      setIsQuickConnecting(false);
+    }
+  }
+
   if (isConnected) {
     return <WalletDetails status={status} />;
   }
+
+  const connecting = status === "connecting" || isQuickConnecting || isConnectPending;
 
   return (
     <>
@@ -68,19 +105,21 @@ export function WalletButton() {
       <Button
         size="icon"
         variant="outline"
-        onClick={() => setDialogOpen(true)}
+        onClick={handleOneClickConnect}
         className="sm:hidden size-8"
         aria-label="Connect wallet"
+        disabled={connecting}
       >
         <WalletIcon status={status} className="size-4" />
       </Button>
       <Button
         size="sm"
-        onClick={() => setDialogOpen(true)}
+        onClick={handleOneClickConnect}
         className="hidden gap-1.5 sm:inline-flex"
+        disabled={connecting}
       >
         <WalletIcon status={status} className="size-3.5" />
-        Connect to Run
+        Connect & Sign In
       </Button>
       <ConnectDialog open={dialogOpen} onOpenChange={setDialogOpen} />
     </>

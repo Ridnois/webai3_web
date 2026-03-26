@@ -10,6 +10,7 @@ import {
   ChevronDown,
   Loader2,
   Sparkles,
+  Gauge,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useModels } from "@/hooks/use-models";
@@ -26,6 +27,8 @@ import { toInferenceApiError } from "@/lib/inference-error";
 import { formatUsdc, usdcToOnChainAmount } from "@/lib/pricing";
 import { toastInferenceError, toastInsufficientFunds } from "@/lib/toast";
 import type { TaskType, ReplicateModel } from "@/types/inference";
+import { FreeCreditBanner } from "@/components/free-credit-banner";
+import { ModelTierPill } from "@/components/sections/model-tier-pill";
 
 const DEFAULT_MODEL_IDS: Record<TaskType, string> = {
   "text-to-image": "black-forest-labs/flux-schnell",
@@ -87,8 +90,26 @@ function CompactModelDropdown({
 }) {
   const { data: models, isLoading } = useModels(task);
   const [open, setOpen] = useState(false);
+  const [hovered, setHovered] = useState<ReplicateModel | null>(null);
 
   const displayName = selectedModel?.name ?? "Select model";
+
+  function groupedModels() {
+    if (!models || models.length === 0) return { featured: [], others: [] };
+    const sorted = [...models].sort((a, b) => (b.runCount ?? 0) - (a.runCount ?? 0));
+    const featured = sorted.slice(0, Math.min(3, sorted.length));
+    const others = sorted.slice(featured.length);
+    return { featured, others };
+  }
+
+  function tierFor(model: ReplicateModel): "pro" | "fast" | "balanced" {
+    if ((model.runCount ?? 0) > 5_000) return "pro";
+    if ((model.runCount ?? 0) > 1_000) return "fast";
+    return "balanced";
+  }
+
+  const { featured, others } = groupedModels();
+  const preview = hovered ?? selectedModel ?? featured[0] ?? others[0];
 
   return (
     <div className="relative">
@@ -96,7 +117,7 @@ function CompactModelDropdown({
         type="button"
         onClick={() => setOpen((v) => !v)}
         disabled={isLoading || !models?.length}
-        className="flex items-center gap-1.5 rounded-lg border border-black/10 dark:border-white/10 bg-black/[0.03] dark:bg-white/[0.04] px-3 py-1.5 text-xs text-muted-foreground transition-all hover:text-foreground hover:border-black/20 dark:hover:border-white/20 disabled:opacity-50"
+        className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-1.5 text-xs font-medium text-primary transition-all hover:border-primary/40 disabled:opacity-50"
       >
         {isLoading ? (
           <Loader2 className="size-3 animate-spin" />
@@ -116,34 +137,116 @@ function CompactModelDropdown({
       {open && models && models.length > 0 && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute bottom-full left-0 z-20 mb-2 w-64 overflow-hidden rounded-xl border border-black/10 dark:border-white/10 bg-background shadow-xl shadow-black/20">
-            <div className="max-h-56 overflow-y-auto">
-              {models.map((m) => {
-                const isActive =
-                  m.owner === selectedModel?.owner &&
-                  m.name === selectedModel?.name;
-                return (
-                  <button
-                    key={`${m.owner}/${m.name}`}
-                    type="button"
-                    onClick={() => {
-                      onSelect(m);
-                      setOpen(false);
-                    }}
-                    className={cn(
-                      "flex w-full flex-col gap-0.5 px-3 py-2.5 text-left text-xs transition-colors hover:bg-muted/60",
-                      isActive && "bg-primary/8 text-primary"
-                    )}
-                  >
-                    <span className="font-medium font-mono">{m.name}</span>
-                    {m.description && (
-                      <span className="line-clamp-1 text-muted-foreground/70">
-                        {m.description}
+          <div className="absolute bottom-full left-0 z-20 mb-2 w-[420px] overflow-hidden rounded-xl border border-border/70 bg-background shadow-2xl shadow-black/20">
+            <div className="grid grid-cols-5">
+              <div className="col-span-3 max-h-72 overflow-y-auto divide-y divide-border/60">
+                {featured.length > 0 && (
+                  <div className="bg-primary/5 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
+                    Top picks
+                  </div>
+                )}
+                {featured.map((m) => {
+                  const isActive =
+                    m.owner === selectedModel?.owner &&
+                    m.name === selectedModel?.name;
+                  return (
+                    <button
+                      key={`${m.owner}/${m.name}-featured`}
+                      type="button"
+                      onMouseEnter={() => setHovered(m)}
+                      onMouseLeave={() => setHovered(null)}
+                      onClick={() => {
+                        onSelect(m);
+                        setOpen(false);
+                      }}
+                      className={cn(
+                        "flex w-full flex-col gap-0.5 px-3 py-2.5 text-left text-xs transition-colors hover:bg-primary/10",
+                        isActive && "bg-primary/15 text-primary"
+                      )}
+                    >
+                      <span className="flex items-center gap-2 font-semibold">
+                        <span className="font-mono text-[11px]">{m.name}</span>
+                        <ModelTierPill tier={tierFor(m)} />
                       </span>
+                      {m.description && (
+                        <span className="line-clamp-1 text-muted-foreground/70">
+                          {m.description}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+
+                {others.length > 0 && (
+                  <div className="bg-muted/40 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                    More models
+                  </div>
+                )}
+                {others.map((m) => {
+                  const isActive =
+                    m.owner === selectedModel?.owner &&
+                    m.name === selectedModel?.name;
+                  return (
+                    <button
+                      key={`${m.owner}/${m.name}-other`}
+                      type="button"
+                      onMouseEnter={() => setHovered(m)}
+                      onMouseLeave={() => setHovered(null)}
+                      onClick={() => {
+                        onSelect(m);
+                        setOpen(false);
+                      }}
+                      className={cn(
+                        "flex w-full flex-col gap-0.5 px-3 py-2.5 text-left text-xs transition-colors hover:bg-muted/60",
+                        isActive && "bg-primary/10 text-primary"
+                      )}
+                    >
+                      <span className="font-mono text-[11px] font-medium flex items-center gap-2">
+                        {m.name}
+                        <ModelTierPill tier={tierFor(m)} />
+                      </span>
+                      {m.description && (
+                        <span className="line-clamp-1 text-muted-foreground/70">
+                          {m.description}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Preview panel */}
+              <div className="col-span-2 hidden border-l border-border/60 bg-muted/50 p-3 sm:flex sm:flex-col sm:gap-2">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                  Preview
+                </p>
+                {preview ? (
+                  <div className="space-y-2 rounded-lg border border-border/70 bg-background/90 p-3 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-mono text-sm font-semibold">{preview.name}</p>
+                        <p className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+                          {preview.owner}
+                        </p>
+                      </div>
+                      <ModelTierPill tier={tierFor(preview)} />
+                    </div>
+                    {preview.description && (
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        {preview.description}
+                      </p>
                     )}
-                  </button>
-                );
-              })}
+                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                      <Gauge className="size-3.5" />
+                      <span>{preview.runCount?.toLocaleString() ?? "—"} runs</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-border/70 text-xs text-muted-foreground">
+                    Hover to preview
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </>
@@ -220,14 +323,19 @@ export function HomePromptBox() {
   const startRequestPhase = useCallback(
     (input: Record<string, unknown>) => {
       if (!selectedModel) return;
+      inference.resetResult();
       requestMutation.mutate(
         { model: `${selectedModel.owner}/${selectedModel.name}`, task, input },
         {
           onSuccess: (data) => {
-            if (data.phase !== "payment-required") return;
-            paymentRequirementsRef.current = data.paymentRequirementsBase64;
-            setEstimatedCostFromServer(data.estimatedCostUsdc);
-            setPaymentDialogOpen(true);
+            if (data.phase === "payment-required") {
+              paymentRequirementsRef.current = data.paymentRequirementsBase64;
+              setEstimatedCostFromServer(data.estimatedCostUsdc);
+              setPaymentDialogOpen(true);
+            }
+            if (data.phase === "complete") {
+              resetPaymentFlow();
+            }
           },
           onError: () => {
             pendingInput.current = null;
@@ -403,10 +511,12 @@ export function HomePromptBox() {
     : "Processing…";
 
   const canSubmit = prompt.trim().length > 0 && !!selectedModel && !isLoading;
-  const result = submitMutation.data?.response;
+  const result = inference.result ?? submitMutation.data?.response;
 
   return (
     <div className="w-full space-y-3">
+      <FreeCreditBanner />
+
       {/* Composer card */}
       <div className={cn(
         "glass overflow-hidden rounded-2xl transition-all duration-300",

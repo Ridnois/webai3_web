@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Sparkles, Images, ArrowRight } from "lucide-react";
+import { Images, ArrowRight, Sparkles } from "lucide-react";
 import { HomePromptBox } from "@/components/sections/home-prompt-box";
 import { PlatformStatsBar } from "@/components/sections/platform-stats-bar";
 import { GalleryGrid } from "@/components/gallery/gallery-grid";
@@ -11,67 +11,38 @@ export default function HomePage() {
     <div className="min-h-screen">
 
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
-      <section className="hero-grid relative flex flex-col items-center overflow-hidden px-4 pt-20 pb-10 sm:pt-28 sm:px-6 lg:px-8">
-
-        {/* Ambient orbs */}
-        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-          <div className="absolute left-1/3 -top-20 size-[560px] -translate-x-1/2 rounded-full bg-primary/12 blur-[120px] animate-drift" />
-          <div className="absolute right-1/4 top-0 size-[400px] translate-x-1/2 rounded-full bg-primary/8 blur-[100px] animate-drift" style={{ animationDuration: "12s", animationDelay: "0.3s" }} />
-          <div className="absolute left-1/2 top-1/3 size-[320px] -translate-x-1/2 rounded-full bg-violet-500/6 blur-[100px] animate-drift" style={{ animationDuration: "7s", animationDelay: "1.5s" }} />
-        </div>
-
-        <div className="relative w-full max-w-2xl text-center">
-
-          {/* Kicker badge */}
-          <div className="animate-fade-in mb-6 flex items-center justify-center">
-            <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/8 px-3.5 py-1 text-[11px] font-mono font-medium uppercase tracking-widest text-primary">
+      <section className="relative flex flex-col items-center overflow-hidden px-4 pt-14 pb-6 sm:pt-18 sm:px-6 lg:px-8">
+        <div className="relative w-full max-w-2xl text-center space-y-4">
+          <div className="animate-fade-in flex justify-center">
+            <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/8 px-3 py-1 text-[11px] font-mono font-medium uppercase tracking-widest text-primary">
               <span className="inline-block size-1.5 rounded-full bg-primary animate-pulse" />
-              x402 protocol · ethereum mainnet
+              Pay-per-use · On-chain receipts
             </span>
           </div>
 
-          {/* Headline */}
-          <h1 className="animate-fade-in-up delay-75 text-5xl font-black tracking-[-0.03em] text-foreground sm:text-6xl">
-            Pay-per-use AI inference.
+          <h1 className="animate-fade-in-up delay-50 text-4xl font-black tracking-[-0.02em] text-foreground sm:text-5xl">
+            Run an AI inference in seconds.
           </h1>
 
-          {/* Description */}
-          <p className="animate-fade-in-up delay-150 mt-4 text-base leading-relaxed text-muted-foreground sm:text-lg">
-            Connect wallet, pay per run in USDC via x402, get results on-chain.
-            <br className="hidden sm:block" />
-            No subscriptions. No accounts. Fully verifiable.
+          <p className="animate-fade-in-up delay-100 text-base leading-relaxed text-muted-foreground sm:text-lg">
+            Connect your wallet, pick a model, and get results. No accounts. No subscriptions.
           </p>
 
-          {/* CTAs */}
-          <div className="animate-fade-in-up delay-200 mt-7 flex flex-wrap items-center justify-center gap-3">
+          <div className="animate-fade-in-up delay-150 flex flex-wrap items-center justify-center gap-3">
             <Link
-              href="/inference/text-to-image"
+              href="#try"
               className="brand-cta inline-flex h-11 items-center gap-2.5 rounded-full px-7 text-sm font-semibold tracking-wide transition-all duration-200"
             >
               <Sparkles className="size-4 shrink-0" />
-              Generate Image
+              Try a prompt
             </Link>
             <Link
               href="/gallery"
               className="brand-ghost inline-flex h-11 items-center gap-2.5 rounded-full px-6 text-sm font-medium tracking-wide transition-all duration-200"
             >
               <Images className="size-4 shrink-0 opacity-70" />
-              Browse Gallery
+              See gallery
             </Link>
-          </div>
-
-          {/* Stat pills */}
-          <div className="animate-fade-in-up delay-300 mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
-            {[
-              ["$0.001", "per second of compute"],
-              ["USDC", "on-chain settlement"],
-              ["EIP-3009", "transferWithAuthorization"],
-            ].map(([value, label]) => (
-              <div key={value} className="group flex items-baseline gap-1.5 cursor-default">
-                <span className="font-mono text-sm font-semibold text-foreground">{value}</span>
-                <span className="text-xs text-muted-foreground/60 transition-colors group-hover:text-muted-foreground">{label}</span>
-              </div>
-            ))}
           </div>
         </div>
       </section>
@@ -86,7 +57,7 @@ export default function HomePage() {
       </section>
 
       {/* ── Prompt composer ───────────────────────────────────────────────── */}
-      <section className="px-4 pb-16 sm:px-6 lg:px-8">
+      <section id="try" className="px-4 pb-16 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl">
 
           {/* Section divider */}
@@ -98,6 +69,13 @@ export default function HomePage() {
           </div>
 
           <HomePromptBox />
+        </div>
+      </section>
+
+      {/* ── Protocol flow / How it works ─────────────────────────────────── */}
+      <section className="border-t border-border/60 bg-card/40 px-4 py-12 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-5xl">
+          <HowItWorksSection />
         </div>
       </section>
 
@@ -131,9 +109,6 @@ export default function HomePage() {
           </Suspense>
         </div>
       </section>
-
-      {/* ── How it works ──────────────────────────────────────────────────── */}
-      <HowItWorksSection />
 
     </div>
   );

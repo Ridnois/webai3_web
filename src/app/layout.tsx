@@ -6,6 +6,7 @@ import { Toaster } from "sonner";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { Web3Provider } from "@/providers/web3-provider";
+import { WalletBonusProvider } from "@/providers/wallet-bonus-provider";
 import { PresaleFloat } from "@/components/presale-float";
 import "./globals.css";
 
@@ -37,18 +38,20 @@ export default function RootLayout({
       >
         <ThemeProvider attribute="class" defaultTheme="dark" disableTransitionOnChange>
           <Web3Provider>
-            <SiteHeader />
-            <main>{children}</main>
-            <SiteFooter />
-            <PresaleFloat />
-            <Toaster
-              position="bottom-right"
-              theme="system"
-              offset={16}
-              gap={8}
-              duration={6000}
-              closeButton
-            />
+            <WalletBonusProvider>
+              <SiteHeader />
+              <main>{children}</main>
+              <SiteFooter />
+              <PresaleFloat />
+              <Toaster
+                position="bottom-right"
+                theme="system"
+                offset={16}
+                gap={8}
+                duration={6000}
+                closeButton
+              />
+            </WalletBonusProvider>
           </Web3Provider>
         </ThemeProvider>
         <Analytics />

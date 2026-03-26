@@ -24,6 +24,7 @@ import {
   MessageSquareText,
 } from "lucide-react";
 import type { InferenceHistoryItem } from "@/hooks/use-inference-history";
+import { FreeCreditBanner } from "@/components/free-credit-banner";
 
 function formatDuration(ms: number): string {
   const seconds = Math.floor(ms / 1000);
@@ -250,6 +251,9 @@ export function UserDashboard() {
               {sessionAddress.slice(0, 6)}...{sessionAddress.slice(-4)}
             </p>
           )}
+          <div className="mt-2">
+            <FreeCreditBanner variant="pill" showDefault={false} />
+          </div>
         </div>
       </div>
 

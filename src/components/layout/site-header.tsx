@@ -40,7 +40,12 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Logo />
+        <div className="relative flex items-center gap-2">
+          <Logo />
+          <span className="pointer-events-none select-none -rotate-3 bg-amber-300/85 px-2.5 py-[2px] text-[10px] font-black uppercase tracking-[0.14em] text-amber-950 shadow-[0_6px_18px_-10px_rgba(0,0,0,0.35)]">
+            Beta
+          </span>
+        </div>
 
         <nav className="hidden items-center gap-5 md:flex" aria-label="Main">
           {allNav.map((item) => (
