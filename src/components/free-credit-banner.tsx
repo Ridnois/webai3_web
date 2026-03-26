@@ -3,17 +3,20 @@
 import { Sparkles } from "lucide-react";
 import { useFreeCreditStatus } from "@/hooks/use-free-credit-status";
 import { cn } from "@/lib/utils";
+import { FreeCreditCriteriaDialog } from "@/components/free-credit-criteria-dialog";
 
 interface FreeCreditBannerProps {
   variant?: "bar" | "pill";
   showDefault?: boolean;
   className?: string;
+  onClick?: () => void;
 }
 
 export function FreeCreditBanner({
   variant = "bar",
   showDefault = true,
   className,
+  onClick,
 }: FreeCreditBannerProps) {
   const { status, isLoading } = useFreeCreditStatus();
 
@@ -56,7 +59,7 @@ export function FreeCreditBanner({
 
   // Default promo
   if (variant === "pill") {
-    return (
+    const pill = (
       <span
         className={cn(
           "inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary dark:bg-primary/15",
@@ -67,9 +70,10 @@ export function FreeCreditBanner({
         5 free inferences for new users
       </span>
     );
+    return onClick ? pill : <FreeCreditCriteriaDialog trigger={pill} />;
   }
 
-  return (
+  const bar = (
     <div
       className={cn(
         "flex items-center gap-2 rounded-2xl border border-primary/20 bg-primary/8 px-3.5 py-2.5 text-sm font-semibold text-primary shadow-[0_12px_32px_-18px] shadow-primary/25",
@@ -80,4 +84,6 @@ export function FreeCreditBanner({
       5 free inferences for new users
     </div>
   );
+
+  return onClick ? bar : <FreeCreditCriteriaDialog trigger={bar} />;
 }
