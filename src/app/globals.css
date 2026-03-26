@@ -52,6 +52,10 @@
 }
 
 :root {
+  /* Local font fallbacks to avoid remote fetch during builds */
+  --font-geist-sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-geist-mono: "Roboto Mono", "SFMono-Regular", ui-monospace, "Menlo", monospace;
+
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);

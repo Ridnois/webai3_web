@@ -21,12 +21,9 @@ export default function HomePage() {
             </span>
           </div>
 
-          <div className="relative">
-            <FreeCreditFloatHome />
-            <h1 className="animate-fade-in-up delay-50 text-4xl font-black tracking-[-0.02em] text-foreground sm:text-5xl">
-              Run an AI inference in seconds.
-            </h1>
-          </div>
+          <h1 className="animate-fade-in-up delay-50 text-4xl font-black tracking-[-0.02em] text-foreground sm:text-5xl">
+            Run an AI inference in seconds.
+          </h1>
 
           <p className="animate-fade-in-up delay-100 text-base leading-relaxed text-muted-foreground sm:text-lg">
             Connect your wallet, pick a model, and get results. No accounts. No subscriptions.

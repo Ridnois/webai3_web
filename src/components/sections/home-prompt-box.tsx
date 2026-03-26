@@ -15,7 +15,6 @@ import {
 import { cn } from "@/lib/utils";
 import { useModels } from "@/hooks/use-models";
 import { useInference } from "@/hooks/use-inference";
-import { useAuth } from "@/hooks/use-auth";
 import { useCostEstimate } from "@/hooks/use-cost-estimate";
 import { useX402Payment } from "@/hooks/use-x402-payment";
 import { useWalletBalances } from "@/hooks/use-wallet-balances";
@@ -29,6 +28,7 @@ import { toastInferenceError, toastInsufficientFunds } from "@/lib/toast";
 import type { TaskType, ReplicateModel } from "@/types/inference";
 import { ModelTierPill } from "@/components/sections/model-tier-pill";
 import { useFreeCreditStatus } from "@/hooks/use-free-credit-status";
+import { useAuth } from "@/hooks/use-auth";
 
 const DEFAULT_MODEL_IDS: Record<TaskType, string> = {
   "text-to-image": "black-forest-labs/flux-schnell",
@@ -269,6 +269,7 @@ export function HomePromptBox() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [selectedModel, setSelectedModel] = useState<ReplicateModel | null>(null);
   const { status: freeStatus, isLoading: freeLoading } = useFreeCreditStatus();
+  const { isAuthenticated: isFreeAuthed } = useAuth();
 
   // Auto-select default model when models load or task changes
   const { data: models } = useModels(task);
@@ -514,21 +515,16 @@ export function HomePromptBox() {
   const canSubmit = prompt.trim().length > 0 && !!selectedModel && !isLoading;
   const result = inference.result ?? submitMutation.data?.response;
   const showFreeBanner =
+    isFreeAuthed &&
     !freeLoading &&
-    (!freeStatus || freeStatus.remainingCredit > 0);
+    freeStatus &&
+    freeStatus.remainingCredit > 0;
   const freeLabel = freeStatus
     ? `${freeStatus.remainingCredit} free inference${freeStatus.remainingCredit === 1 ? "" : "s"} left`
-    : "5 free inferences for new users";
+    : "";
 
   return (
     <div className="w-full space-y-3">
-      {showFreeBanner && (
-        <div className="flex items-center gap-2 rounded-xl bg-emerald-500/12 px-3.5 py-2 text-xs font-semibold text-emerald-900 shadow-[0_12px_30px_-18px_rgba(16,185,129,0.45)] dark:text-emerald-50 dark:bg-emerald-500/18">
-          <Sparkles className="size-3.5" />
-          <span>{freeLabel}</span>
-        </div>
-      )}
-
       {/* Composer card */}
       <div className={cn(
         "glass overflow-hidden rounded-2xl transition-all duration-300",
@@ -596,11 +592,13 @@ export function HomePromptBox() {
               onSelect={setSelectedModel}
             />
             {costEstimate.data && (
-              <div className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1">
-                <span className="font-mono text-[11px] font-semibold text-primary">
-                  {formatUsdc(costEstimate.data.estimatedCostUsdc)}
-                </span>
-                <span className="text-[9px] text-muted-foreground/60 uppercase tracking-wider">est.</span>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1">
+                  <span className="font-mono text-[11px] font-semibold text-primary">
+                    {formatUsdc(costEstimate.data.estimatedCostUsdc)}
+                  </span>
+                  <span className="text-[9px] text-muted-foreground/60 uppercase tracking-wider">est.</span>
+                </div>
               </div>
             )}
           </div>
@@ -621,6 +619,13 @@ export function HomePromptBox() {
             )}
           </button>
         </div>
+
+        {showFreeBanner && (
+          <div className="flex items-center gap-2 border-t border-emerald-500/20 bg-emerald-500/8 px-3 py-2 text-[11px] font-semibold text-emerald-900 dark:text-emerald-50 sm:text-xs">
+            <Sparkles className="size-3 shrink-0 text-emerald-600 dark:text-emerald-200" />
+            <span className="truncate">{freeLabel}</span>
+          </div>
+        )}
       </div>
 
       {/* Suggestion chips */}
