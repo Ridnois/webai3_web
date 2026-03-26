@@ -5,7 +5,6 @@ import { HomePromptBox } from "@/components/sections/home-prompt-box";
 import { PlatformStatsBar } from "@/components/sections/platform-stats-bar";
 import { GalleryGrid } from "@/components/gallery/gallery-grid";
 import { HowItWorksSection } from "@/components/sections/how-it-works-section";
-import { FreeCreditFloatHome } from "@/components/sections/free-credit-float-home";
 
 export default function HomePage() {
   return (
