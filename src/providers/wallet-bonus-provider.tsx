@@ -22,7 +22,7 @@ export function WalletBonusProvider({ children }: { children: ReactNode }) {
     if (!isAuthenticated || !address || !chainId || hasAttemptedGrant) return;
     if (isLoading || usdcRaw === undefined) return;
 
-    if (usdcRaw > 0n && !isGranting) {
+    if (usdcRaw > BigInt(0) && !isGranting) {
       setHasAttemptedGrant(true);
       grantCredit(chainId)
         .then((res) => {
