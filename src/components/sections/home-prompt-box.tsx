@@ -27,7 +27,6 @@ import { toInferenceApiError } from "@/lib/inference-error";
 import { formatUsdc, usdcToOnChainAmount } from "@/lib/pricing";
 import { toastInferenceError, toastInsufficientFunds } from "@/lib/toast";
 import type { TaskType, ReplicateModel } from "@/types/inference";
-import { FreeCreditBanner } from "@/components/free-credit-banner";
 import { ModelTierPill } from "@/components/sections/model-tier-pill";
 
 const DEFAULT_MODEL_IDS: Record<TaskType, string> = {
@@ -515,8 +514,6 @@ export function HomePromptBox() {
 
   return (
     <div className="w-full space-y-3">
-      <FreeCreditBanner />
-
       {/* Composer card */}
       <div className={cn(
         "glass overflow-hidden rounded-2xl transition-all duration-300",

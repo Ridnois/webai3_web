@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { TaskCard } from "@/components/inference/task-card";
 import { TASK_CONFIGS } from "@/types/task-config";
 import type { TaskType } from "@/types/inference";
-import { FreeCreditBanner } from "@/components/free-credit-banner";
 
 export const metadata: Metadata = {
   title: "AI Inference — WEBAI3",
@@ -23,9 +22,6 @@ export default function InferencePage() {
           Pick a task, choose a model, and get results. Pay only for what you
           use.
         </p>
-        <div className="mt-6 flex justify-center">
-          <FreeCreditBanner variant="pill" />
-        </div>
       </div>
       <div className="mx-auto grid max-w-5xl gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {TASKS.map((task) => (
