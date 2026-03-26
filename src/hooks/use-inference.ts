@@ -25,61 +25,14 @@ interface InferenceCompleteResult {
   settlementBase64: string | null;
 }
 
-async function requestInference(
-  input: InferenceRequestInput
-): Promise<PaymentRequiredResult> {
-  const res = await fetch("/api/inference", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  });
+type RequestResult = PaymentRequiredResult | InferenceCompleteResult;
 
-  if (res.status === 402) {
-    const paymentRequirementsBase64 = res.headers.get("Payment-Required");
-    if (!paymentRequirementsBase64) {
-      throw new Error("402 response missing Payment-Required header");
-    }
-    const body = await res.json().catch(() => ({}));
-    return {
-      phase: "payment-required",
-      paymentRequirementsBase64,
-      estimatedCostUsdc: body.estimatedCostUsdc ?? 0,
-    };
-  }
-
-  if (!res.ok) {
-    throw await parseInferenceApiError(res, "Request failed", "request");
-  }
-
-  throw new Error("Unexpected 200 response without payment");
-}
-
-interface SubmitInput extends InferenceRequestInput {
-  paymentSignatureBase64: string;
-}
-
-async function submitInference(
-  input: SubmitInput,
+async function readInferenceStream(
+  res: Response,
   onPhase: (phase: InferencePhase) => void
 ): Promise<InferenceCompleteResult> {
-  const { paymentSignatureBase64, ...body } = input;
-
-  const res = await fetch("/api/inference", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Payment-Signature": paymentSignatureBase64,
-    },
-    body: JSON.stringify(body),
-  });
-
-  if (!res.ok) {
-    throw await parseInferenceApiError(res, "Inference failed", "submit");
-  }
-
   if (!res.body) throw new Error("No response body from inference API");
 
-  // Read SSE stream
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
@@ -128,17 +81,85 @@ async function submitInference(
   return result;
 }
 
+async function requestInference(
+  input: InferenceRequestInput,
+  onPhase: (phase: InferencePhase) => void
+): Promise<RequestResult> {
+  const res = await fetch("/api/inference", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+
+  if (res.status === 402) {
+    const paymentRequirementsBase64 = res.headers.get("Payment-Required");
+    if (!paymentRequirementsBase64) {
+      throw new Error("402 response missing Payment-Required header");
+    }
+    const body = await res.json().catch(() => ({}));
+    return {
+      phase: "payment-required",
+      paymentRequirementsBase64,
+      estimatedCostUsdc: body.estimatedCostUsdc ?? 0,
+    };
+  }
+
+  if (!res.ok) {
+    throw await parseInferenceApiError(res, "Request failed", "request");
+  }
+
+  return readInferenceStream(res, onPhase);
+}
+
+interface SubmitInput extends InferenceRequestInput {
+  paymentSignatureBase64: string;
+}
+
+async function submitInference(
+  input: SubmitInput,
+  onPhase: (phase: InferencePhase) => void
+): Promise<InferenceCompleteResult> {
+  const { paymentSignatureBase64, ...body } = input;
+
+  const res = await fetch("/api/inference", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Payment-Signature": paymentSignatureBase64,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    throw await parseInferenceApiError(res, "Inference failed", "submit");
+  }
+
+  return readInferenceStream(res, onPhase);
+}
+
 export function useInference() {
   const queryClient = useQueryClient();
   const [inferencePhase, setInferencePhase] = useState<InferencePhase>(null);
+  const [lastResult, setLastResult] = useState<InferenceCompleteResult | null>(null);
 
   const request = useMutation({
-    mutationFn: requestInference,
+    mutationFn: (input: InferenceRequestInput) => requestInference(input, setInferencePhase),
+    onSuccess: (data) => {
+      if (data.phase === "complete") {
+        setLastResult(data);
+        setInferencePhase(null);
+        queryClient.invalidateQueries({ queryKey: ["inference-history"] });
+      }
+    },
+    onError: () => {
+      setInferencePhase(null);
+    },
   });
 
   const submit = useMutation({
     mutationFn: (input: SubmitInput) => submitInference(input, setInferencePhase),
-    onSuccess: () => {
+    onSuccess: (data) => {
+      setLastResult(data);
       setInferencePhase(null);
       queryClient.invalidateQueries({ queryKey: ["inference-history"] });
     },
@@ -147,5 +168,7 @@ export function useInference() {
     },
   });
 
-  return { request, submit, inferencePhase };
+  const resetResult = () => setLastResult(null);
+
+  return { request, submit, inferencePhase, result: lastResult?.response, resetResult };
 }

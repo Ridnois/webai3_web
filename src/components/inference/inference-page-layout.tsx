@@ -659,7 +659,7 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
   }
 
   // ── Inference hooks ────────────────────────────────────────────────────────
-  const inference = useInference();
+  const inference       = useInference();
   const requestMutation = inference.request;
   const submitMutation  = inference.submit;
   const inferencePhase  = inference.inferencePhase;
@@ -693,14 +693,19 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
   const startRequestPhase = useCallback(
     (input: Record<string, unknown>) => {
       if (!selectedModel) return;
+      inference.resetResult();
       requestMutation.mutate(
         { model: `${selectedModel.owner}/${selectedModel.name}`, task, input },
         {
           onSuccess: (data) => {
-            if (data.phase !== "payment-required") return;
-            paymentRequirementsRef.current = data.paymentRequirementsBase64;
-            setEstimatedCostFromServer(data.estimatedCostUsdc);
-            setPaymentDialogOpen(true);
+            if (data.phase === "payment-required") {
+              paymentRequirementsRef.current = data.paymentRequirementsBase64;
+              setEstimatedCostFromServer(data.estimatedCostUsdc);
+              setPaymentDialogOpen(true);
+            }
+            if (data.phase === "complete") {
+              resetPaymentFlow();
+            }
           },
           onError: () => {
             pendingInput.current = null;
@@ -833,6 +838,7 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
   function handleReset() {
     submitMutation.reset();
     requestMutation.reset();
+    inference.resetResult();
     setPromptValue("");
     setTimeout(() => textareaRef.current?.focus(), 50);
   }
@@ -850,7 +856,7 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
     : "Processing…";
 
   const canSubmit = !!selectedModel && !!promptValue.trim() && !isLoading;
-  const result = submitMutation.data?.response;
+  const result = inference.result ?? submitMutation.data?.response;
   const hasActiveContent = !!(result || isLoading || submitMutation.error);
   const taskNav = TASK_NAV.find((n) => n.task === task)!;
   const [mobileModelOpen, setMobileModelOpen] = useState(false);

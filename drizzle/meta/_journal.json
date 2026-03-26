@@ -22,6 +22,13 @@
       "when": 1772842951121,
       "tag": "0002_living_night_thrasher",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1774497041038,
+      "tag": "0003_gigantic_frank_castle",
+      "breakpoints": true
     }
   ]
 }

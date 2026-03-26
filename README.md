@@ -14,6 +14,7 @@ Built on **Base** (Coinbase L2), powered by **Replicate** for model execution, *
 | x402 USDC payments | Pay-per-inference with USDC on Base via Coinbase x402 facilitator |
 | Settlement before compute | Payment is settled on-chain before inference runs — no free rides |
 | Cost estimation | Upfront cost estimates before running a model |
+| Free inferences | New wallets with USDC balance receive 5 free runs on first connection |
 | Text to Image | Generate images from prompts using diffusion models |
 | Text to Text | Generate, summarize, or transform text with language models |
 | Text to Sound | Generate music, effects, or speech from text descriptions |

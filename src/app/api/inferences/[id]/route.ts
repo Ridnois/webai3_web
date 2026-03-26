@@ -37,6 +37,7 @@ export async function GET(
         errorMessage: inferences.errorMessage,
         predictTimeMs: inferences.predictTimeMs,
         isPublic: inferences.isPublic,
+        isFreeInference: inferences.isFreeInference,
         createdAt: inferences.createdAt,
       })
       .from(inferences)

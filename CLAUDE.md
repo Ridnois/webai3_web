@@ -62,7 +62,8 @@ src/
 │   ├── wallet/                 # wallet-button, wallet-details, connect-dialog
 │   ├── inference/              # inference-form, result, loading, model-selector,
 │   │                           # cost-estimate, payment-confirm-dialog,
-│   │                           # text-result, image-result, audio-result
+│   │                           # text-result, image-result, audio-result,
+│   │                           # free-inferences-celebration
 │   ├── gallery/                # gallery-grid (masonry + lightbox), public-result-view
 │   ├── media/                  # media-presenter (unified media display component)
 │   ├── templates/              # template-grid
@@ -89,6 +90,8 @@ src/
 │   ├── use-gallery.ts          # Public gallery
 │   ├── use-share-inference.ts  # Share/unshare publicly
 │   ├── use-wallet-balances.ts  # USDC balance + gas estimate
+│   ├── use-free-credit-status.ts    # Free credit status for current user
+│   ├── use-grant-free-inferences.ts # Grant free inferences on first connection
 │   ├── use-x402-payment.ts     # Prepare x402 payment signature
 │   ├── use-admin-metrics.ts
 │   ├── use-platform-stats.ts
@@ -119,7 +122,8 @@ src/
 │   └── utils.ts                # cn() helper only
 ├── providers/
 │   ├── web3-provider.tsx       # Wagmi provider setup
-│   └── auth-provider.tsx       # Authentication context provider
+│   ├── auth-provider.tsx       # Authentication context provider
+│   └── wallet-bonus-provider.tsx # Grants & celebration for first-time wallets
 └── types/
     ├── inference.ts            # Inference Zod schemas + types
     └── task-config.ts          # Task configuration (TASK_CONFIGS map)
@@ -251,8 +255,9 @@ Pure functions and SDK singleton instances. No React, no hooks.
 
 ### Current Schema
 
-- **`users`** — `address` (PK), `created_at`, `last_seen_at`
-- **`inferences`** — `id` (UUID PK), `user_address` (FK), `task_type`, `model`, `input`, `output_type`, `output_data`, `r2_keys`, `status`, `error_message`, `predict_time_ms`, `estimated_cost_usdc`, `actual_cost_usdc`, `payment_tx_hash` (unique), `payment_chain_id`, `is_public` (0/1), `created_at`
+- **`users`** — `address` (PK), `created_at`, `last_seen_at`, `has_claimed_free_inferences`
+- **`inferences`** — `id` (UUID PK), `user_address` (FK), `task_type`, `model`, `input`, `output_type`, `output_data`, `r2_keys`, `status`, `error_message`, `predict_time_ms`, `estimated_cost_usdc`, `actual_cost_usdc`, `payment_tx_hash` (unique), `payment_chain_id`, `is_public` (0/1), `is_free_inference` (0/1), `created_at`
+- **`free_inference_grants`** — `id` (UUID PK), `address` (FK/unique), `credit_amount`, `used_count`, `granted_at`, `expires_at`, `created_at`
 
 ### Enums
 

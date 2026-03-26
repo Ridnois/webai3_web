@@ -7,6 +7,7 @@ import {
   jsonb,
   integer,
   numeric,
+  boolean,
 } from "drizzle-orm/pg-core";
 
 export const taskTypeEnum = pgEnum("task_type", [
@@ -35,6 +36,9 @@ export const users = pgTable("users", {
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
+  hasClaimedFreeInferences: boolean("has_claimed_free_inferences")
+    .notNull()
+    .default(false),
 });
 
 export const inferences = pgTable("inferences", {
@@ -56,6 +60,24 @@ export const inferences = pgTable("inferences", {
   paymentTxHash: text("payment_tx_hash").unique(),
   paymentChainId: integer("payment_chain_id"),
   isPublic: integer("is_public").notNull().default(0),
+  isFreeInference: integer("is_free_inference").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const freeInferenceGrants = pgTable("free_inference_grants", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  address: text("address")
+    .notNull()
+    .unique()
+    .references(() => users.address),
+  creditAmount: integer("credit_amount").notNull().default(5),
+  usedCount: integer("used_count").notNull().default(0),
+  grantedAt: timestamp("granted_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
