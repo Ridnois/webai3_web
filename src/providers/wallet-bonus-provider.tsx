@@ -55,16 +55,16 @@ export function WalletBonusProvider({ children }: { children: ReactNode }) {
   }
 
   function fireConfetti() {
-    const duration = 2500;
+    const duration = 2600;
     const end = Date.now() + duration;
+    const defaults = { spread: 80, ticks: 200, gravity: 0.9, origin: { y: 0.65 } };
+
+    // Initial burst from both sides
+    confetti({ particleCount: 80, angle: 60, startVelocity: 35, origin: { x: 0, y: 0.7 } });
+    confetti({ particleCount: 80, angle: 120, startVelocity: 35, origin: { x: 1, y: 0.7 } });
+
     (function frame() {
-      confetti({
-        particleCount: 60,
-        spread: 70,
-        origin: { y: 0.6 },
-        ticks: 160,
-        scalar: 0.9,
-      });
+      confetti({ particleCount: 24, scalar: 0.95, ...defaults });
       if (Date.now() < end) requestAnimationFrame(frame);
     })();
   }
