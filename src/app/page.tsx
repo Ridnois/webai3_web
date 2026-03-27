@@ -68,7 +68,15 @@ export default function HomePage() {
             <div className="h-px flex-1 bg-border/50" />
           </div>
 
-          <HomePromptBox />
+          <Suspense
+            fallback={
+              <div className="rounded-2xl border border-border/60 bg-card/40 p-6">
+                <p className="font-mono text-xs text-muted-foreground">Loading prompt composer…</p>
+              </div>
+            }
+          >
+            <HomePromptBox />
+          </Suspense>
         </div>
       </section>
 
