@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAccount } from "wagmi";
 import {
   ArrowUp,
@@ -76,6 +77,13 @@ const SUGGESTIONS: Suggestion[] = [
       "Portrait of a cyberpunk hacker, neon-lit alley background, rain, dramatic lighting, photorealistic, 8k",
   },
 ];
+
+function parseTaskParam(value: string | null): TaskType | null {
+  if (value === "text-to-image") return value;
+  if (value === "text-to-text") return value;
+  if (value === "text-to-sound") return value;
+  return null;
+}
 
 // ── Compact model dropdown ────────────────────────────────────────────────────
 
@@ -263,8 +271,11 @@ function autoResize(el: HTMLTextAreaElement) {
 }
 
 export function HomePromptBox() {
-  const [task, setTask] = useState<TaskType>("text-to-image");
-  const [prompt, setPrompt] = useState("");
+  const searchParams = useSearchParams();
+  const [task, setTask] = useState<TaskType>(
+    () => parseTaskParam(searchParams.get("task")) ?? "text-to-image"
+  );
+  const [prompt, setPrompt] = useState(() => searchParams.get("prompt") ?? "");
   const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [selectedModel, setSelectedModel] = useState<ReplicateModel | null>(null);
