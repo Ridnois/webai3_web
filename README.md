@@ -265,17 +265,6 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-### 5. (Optional) Local dev chain
-
-For local development without using Ethereum Sepolia testnet:
-
-```bash
-pnpm chain:start   # Start Anvil fork of Ethereum Sepolia
-pnpm chain:fund    # Fund test wallets with USDC
-```
-
-Set `NEXT_PUBLIC_ENABLE_DEV_CHAIN=true` in `.env` to enable the local chain in the UI. Note: the x402 facilitator does not support local Anvil chains — payment settlement is mocked with random transaction hashes. Use Ethereum Sepolia for testing real payments end-to-end.
-
 ---
 
 ## Database Schema
@@ -395,10 +384,6 @@ pnpm db:generate      # Generate Drizzle migration from schema changes
 pnpm db:migrate       # Apply pending migrations
 pnpm db:push          # Push schema directly (dev only, skips migrations)
 pnpm db:studio        # Open Drizzle Studio (database browser)
-
-# Local dev chain
-pnpm chain:start      # Start Anvil fork of Ethereum Sepolia
-pnpm chain:fund       # Fund test wallets with USDC
 
 # UI components
 pnpm dlx shadcn add <component>   # Add a new shadcn/ui component

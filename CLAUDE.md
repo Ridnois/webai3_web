@@ -428,8 +428,6 @@ pnpm db:generate      # generate DB migration from schema changes
 pnpm db:migrate       # apply pending migrations
 pnpm db:push          # push schema directly (dev only)
 pnpm db:studio        # open Drizzle Studio (DB browser)
-pnpm chain:start      # start local Anvil dev chain
-pnpm chain:fund       # fund test wallets with USDC
 pnpm dlx shadcn add <component>  # add a new shadcn/ui component
 ```
 
