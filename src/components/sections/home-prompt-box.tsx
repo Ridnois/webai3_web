@@ -11,8 +11,16 @@ import {
   ChevronDown,
   Loader2,
   Sparkles,
+  Search,
   Gauge,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useModels } from "@/hooks/use-models";
 import { useInference } from "@/hooks/use-inference";
@@ -85,181 +93,189 @@ function parseTaskParam(value: string | null): TaskType | null {
   return null;
 }
 
-// ── Compact model dropdown ────────────────────────────────────────────────────
+// ── Model picker dialog ──────────────────────────────────────────────────────
 
-function CompactModelDropdown({
-  task,
+function tierFor(model: ReplicateModel): "pro" | "fast" | "balanced" {
+  if ((model.runCount ?? 0) > 5_000) return "pro";
+  if ((model.runCount ?? 0) > 1_000) return "fast";
+  return "balanced";
+}
+
+function formatRunCount(count: number): string {
+  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
+  if (count >= 1_000) return `${(count / 1_000).toFixed(1)}K`;
+  return String(count);
+}
+
+function ModelPickerDialog({
+  open,
+  onOpenChange,
+  models,
+  isLoading,
   selectedModel,
   onSelect,
 }: {
-  task: TaskType;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  models: ReplicateModel[] | undefined;
+  isLoading: boolean;
   selectedModel: ReplicateModel | null;
   onSelect: (model: ReplicateModel) => void;
 }) {
-  const { data: models, isLoading } = useModels(task);
-  const [open, setOpen] = useState(false);
-  const [hovered, setHovered] = useState<ReplicateModel | null>(null);
+  const [search, setSearch] = useState("");
 
-  const displayName = selectedModel?.name ?? "Select model";
+  useEffect(() => {
+    if (open) setSearch("");
+  }, [open]);
 
-  function groupedModels() {
-    if (!models || models.length === 0) return { featured: [], others: [] };
-    const sorted = [...models].sort((a, b) => (b.runCount ?? 0) - (a.runCount ?? 0));
-    const featured = sorted.slice(0, Math.min(3, sorted.length));
-    const others = sorted.slice(featured.length);
-    return { featured, others };
+  const filtered = models?.filter((m) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      m.name.toLowerCase().includes(q) ||
+      m.owner.toLowerCase().includes(q) ||
+      (m.description?.toLowerCase().includes(q) ?? false)
+    );
+  });
+
+  // Split into featured (top 3 by runs) and rest
+  const sorted = filtered
+    ? [...filtered].sort((a, b) => (b.runCount ?? 0) - (a.runCount ?? 0))
+    : [];
+  const featured = sorted.slice(0, Math.min(3, sorted.length));
+  const others = sorted.slice(featured.length);
+
+  function handleSelect(model: ReplicateModel) {
+    onSelect(model);
+    onOpenChange(false);
   }
-
-  function tierFor(model: ReplicateModel): "pro" | "fast" | "balanced" {
-    if ((model.runCount ?? 0) > 5_000) return "pro";
-    if ((model.runCount ?? 0) > 1_000) return "fast";
-    return "balanced";
-  }
-
-  const { featured, others } = groupedModels();
-  const preview = hovered ?? selectedModel ?? featured[0] ?? others[0];
 
   return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        disabled={isLoading || !models?.length}
-        className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-1.5 text-xs font-medium text-primary transition-all hover:border-primary/40 disabled:opacity-50"
-      >
-        {isLoading ? (
-          <Loader2 className="size-3 animate-spin" />
-        ) : (
-          <ChevronDown
-            className={cn(
-              "size-3 transition-transform duration-150",
-              open && "rotate-180"
-            )}
-          />
-        )}
-        <span className="max-w-[140px] truncate font-mono text-[11px]">
-          {displayName}
-        </span>
-      </button>
-
-      {open && models && models.length > 0 && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute bottom-full left-0 z-20 mb-2 w-[420px] overflow-hidden rounded-xl border border-border/70 bg-background shadow-2xl shadow-black/20">
-            <div className="grid grid-cols-5">
-              <div className="col-span-3 max-h-72 overflow-y-auto divide-y divide-border/60">
-                {featured.length > 0 && (
-                  <div className="bg-primary/5 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
-                    Top picks
-                  </div>
-                )}
-                {featured.map((m) => {
-                  const isActive =
-                    m.owner === selectedModel?.owner &&
-                    m.name === selectedModel?.name;
-                  return (
-                    <button
-                      key={`${m.owner}/${m.name}-featured`}
-                      type="button"
-                      onMouseEnter={() => setHovered(m)}
-                      onMouseLeave={() => setHovered(null)}
-                      onClick={() => {
-                        onSelect(m);
-                        setOpen(false);
-                      }}
-                      className={cn(
-                        "flex w-full flex-col gap-0.5 px-3 py-2.5 text-left text-xs transition-colors hover:bg-primary/10",
-                        isActive && "bg-primary/15 text-primary"
-                      )}
-                    >
-                      <span className="flex items-center gap-2 font-semibold">
-                        <span className="font-mono text-[11px]">{m.name}</span>
-                        <ModelTierPill tier={tierFor(m)} />
-                      </span>
-                      {m.description && (
-                        <span className="line-clamp-1 text-muted-foreground/70">
-                          {m.description}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-
-                {others.length > 0 && (
-                  <div className="bg-muted/40 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                    More models
-                  </div>
-                )}
-                {others.map((m) => {
-                  const isActive =
-                    m.owner === selectedModel?.owner &&
-                    m.name === selectedModel?.name;
-                  return (
-                    <button
-                      key={`${m.owner}/${m.name}-other`}
-                      type="button"
-                      onMouseEnter={() => setHovered(m)}
-                      onMouseLeave={() => setHovered(null)}
-                      onClick={() => {
-                        onSelect(m);
-                        setOpen(false);
-                      }}
-                      className={cn(
-                        "flex w-full flex-col gap-0.5 px-3 py-2.5 text-left text-xs transition-colors hover:bg-muted/60",
-                        isActive && "bg-primary/10 text-primary"
-                      )}
-                    >
-                      <span className="font-mono text-[11px] font-medium flex items-center gap-2">
-                        {m.name}
-                        <ModelTierPill tier={tierFor(m)} />
-                      </span>
-                      {m.description && (
-                        <span className="line-clamp-1 text-muted-foreground/70">
-                          {m.description}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Preview panel */}
-              <div className="col-span-2 hidden border-l border-border/60 bg-muted/50 p-3 sm:flex sm:flex-col sm:gap-2">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                  Preview
-                </p>
-                {preview ? (
-                  <div className="space-y-2 rounded-lg border border-border/70 bg-background/90 p-3 shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-mono text-sm font-semibold">{preview.name}</p>
-                        <p className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-                          {preview.owner}
-                        </p>
-                      </div>
-                      <ModelTierPill tier={tierFor(preview)} />
-                    </div>
-                    {preview.description && (
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        {preview.description}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                      <Gauge className="size-3.5" />
-                      <span>{preview.runCount?.toLocaleString() ?? "—"} runs</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-border/70 text-xs text-muted-foreground">
-                    Hover to preview
-                  </div>
-                )}
-              </div>
-            </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
+        <DialogHeader className="shrink-0 space-y-0 px-5 pt-5 pb-0">
+          <DialogTitle className="text-base font-semibold">Choose a model</DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground">
+            Pick the AI model to run your prompt
+          </DialogDescription>
+          <div className="relative pt-3 pb-3">
+            <Search className="absolute left-3 top-1/2 size-4 translate-y-[-20%] text-muted-foreground/40" />
+            <input
+              type="text"
+              placeholder="Search models…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-10 w-full rounded-xl border border-border/60 bg-muted/30 pl-10 pr-4 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/20"
+              autoFocus
+            />
           </div>
-        </>
-      )}
-    </div>
+        </DialogHeader>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4">
+          {isLoading ? (
+            <div className="flex justify-center py-16">
+              <Loader2 className="size-5 animate-spin text-muted-foreground/40" />
+            </div>
+          ) : sorted.length === 0 ? (
+            <p className="py-16 text-center text-sm text-muted-foreground/50">
+              {search ? `No models match "${search}"` : "No models available"}
+            </p>
+          ) : (
+            <div className="space-y-1">
+              {/* Featured models */}
+              {featured.length > 0 && !search && (
+                <p className="px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-widest text-primary/70">
+                  Top picks
+                </p>
+              )}
+              {(!search ? featured : []).map((m) => {
+                const isActive =
+                  m.owner === selectedModel?.owner && m.name === selectedModel?.name;
+                return (
+                  <button
+                    key={`${m.owner}/${m.name}`}
+                    type="button"
+                    onClick={() => handleSelect(m)}
+                    className={cn(
+                      "flex w-full gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-primary/8",
+                      isActive && "bg-primary/10 ring-1 ring-primary/25"
+                    )}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className={cn(
+                          "font-mono text-sm font-semibold",
+                          isActive && "text-primary"
+                        )}>
+                          {m.name}
+                        </span>
+                        <ModelTierPill tier={tierFor(m)} />
+                      </div>
+                      <p className="mt-0.5 text-[11px] text-muted-foreground/50">{m.owner}</p>
+                      {m.description && (
+                        <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+                          {m.description}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-1 pt-0.5">
+                      <span className="flex items-center gap-1 text-[10px] tabular-nums text-muted-foreground/40">
+                        <Gauge className="size-3" />
+                        {formatRunCount(m.runCount)}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+
+              {/* Rest of models */}
+              {others.length > 0 && !search && (
+                <p className="px-2 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">
+                  More models
+                </p>
+              )}
+              {(search ? sorted : others).map((m) => {
+                const isActive =
+                  m.owner === selectedModel?.owner && m.name === selectedModel?.name;
+                return (
+                  <button
+                    key={`${m.owner}/${m.name}`}
+                    type="button"
+                    onClick={() => handleSelect(m)}
+                    className={cn(
+                      "flex w-full gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-muted/60",
+                      isActive && "bg-primary/8 ring-1 ring-primary/20"
+                    )}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className={cn(
+                          "font-mono text-sm font-semibold",
+                          isActive && "text-primary"
+                        )}>
+                          {m.name}
+                        </span>
+                        <ModelTierPill tier={tierFor(m)} />
+                      </div>
+                      <p className="mt-0.5 text-[11px] text-muted-foreground/50">{m.owner}</p>
+                      {m.description && (
+                        <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+                          {m.description}
+                        </p>
+                      )}
+                    </div>
+                    <span className="flex shrink-0 items-center gap-1 pt-0.5 text-[10px] tabular-nums text-muted-foreground/40">
+                      <Gauge className="size-3" />
+                      {formatRunCount(m.runCount)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -306,6 +322,7 @@ export function HomePromptBox() {
   const [estimatedCostFromServer, setEstimatedCostFromServer] = useState<number | null>(null);
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [modelDialogOpen, setModelDialogOpen] = useState(false);
 
   const { address, chainId } = useAccount();
   const { usdcFormatted, usdcRaw } = useWalletBalances(address, chainId);
@@ -523,6 +540,23 @@ export function HomePromptBox() {
     ? "Running…"
     : "Processing…";
 
+  // ── Tab indicator measurement ────────────────────────────────────────────
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
+
+  useEffect(() => {
+    const el = tabRefs.current[task];
+    if (!el) return;
+    const parent = el.parentElement;
+    if (!parent) return;
+    const parentRect = parent.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    setIndicatorStyle({
+      left: elRect.left - parentRect.left,
+      width: elRect.width,
+    });
+  }, [task]);
+
   const canSubmit = prompt.trim().length > 0 && !!selectedModel && !isLoading;
   const result = inference.result ?? submitMutation.data?.response;
   const showFreeBanner =
@@ -549,6 +583,7 @@ export function HomePromptBox() {
           {TASKS.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
+              ref={(el) => { tabRefs.current[id] = el; }}
               type="button"
               onClick={() => handleTaskChange(id)}
               className={cn(
@@ -566,9 +601,8 @@ export function HomePromptBox() {
           <span
             className="absolute bottom-0 h-[2px] rounded-full bg-primary transition-all duration-200 ease-out"
             style={{
-              left: `${8 + TASKS.findIndex(t => t.id === task) * (100 / TASKS.length)}%`,
-              width: `${100 / TASKS.length}%`,
-              maxWidth: "80px",
+              left: indicatorStyle.left,
+              width: indicatorStyle.width,
             }}
           />
         </div>
@@ -596,20 +630,26 @@ export function HomePromptBox() {
 
         {/* Footer: model selector + cost + submit */}
         <div className="flex items-center justify-between border-t border-black/[0.05] dark:border-white/[0.05] bg-black/[0.02] dark:bg-white/[0.02] px-3 py-2.5">
-          <div className="flex items-center gap-3">
-            <CompactModelDropdown
-              task={task}
-              selectedModel={selectedModel}
-              onSelect={setSelectedModel}
-            />
+          <div className="flex min-w-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setModelDialogOpen(true)}
+              className="flex min-w-0 items-center gap-1.5 rounded-lg border border-primary/20 bg-primary/5 px-3 py-1.5 text-xs font-medium text-primary transition-all hover:border-primary/40 hover:bg-primary/10"
+            >
+              <ChevronDown className="size-3 shrink-0" />
+              <span className="truncate font-mono text-[11px]">
+                {selectedModel?.name ?? "Select model"}
+              </span>
+              {selectedModel && (
+                <ModelTierPill tier={tierFor(selectedModel)} />
+              )}
+            </button>
             {costEstimate.data && (
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1">
-                  <span className="font-mono text-[11px] font-semibold text-primary">
-                    {formatUsdc(costEstimate.data.estimatedCostUsdc)}
-                  </span>
-                  <span className="text-[9px] text-muted-foreground/60 uppercase tracking-wider">est.</span>
-                </div>
+              <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1">
+                <span className="font-mono text-[11px] font-semibold text-primary">
+                  {formatUsdc(costEstimate.data.estimatedCostUsdc)}
+                </span>
+                <span className="text-[9px] text-muted-foreground/60 uppercase tracking-wider">est.</span>
               </div>
             )}
           </div>
@@ -727,6 +767,14 @@ export function HomePromptBox() {
         </div>
       )}
 
+      <ModelPickerDialog
+        open={modelDialogOpen}
+        onOpenChange={setModelDialogOpen}
+        models={models}
+        isLoading={!models}
+        selectedModel={selectedModel}
+        onSelect={setSelectedModel}
+      />
       <ConnectDialog
         open={connectDialogOpen}
         onOpenChange={setConnectDialogOpen}

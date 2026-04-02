@@ -4,6 +4,8 @@ import { useState, useMemo } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useAdminMetrics } from "@/hooks/use-admin-metrics";
 import type { DailyMetric, ModelMetric, TaskBreakdownItem } from "@/hooks/use-admin-metrics";
+import { useAdminUsers } from "@/hooks/use-admin-users";
+import type { AdminUser } from "@/hooks/use-admin-users";
 import {
   Card,
   CardContent,
@@ -37,6 +39,7 @@ import {
 } from "recharts";
 import {
   Users,
+  Wallet,
   Zap,
   DollarSign,
   Activity,
@@ -758,6 +761,266 @@ function ModelTable({
   );
 }
 
+// ── users table ──────────────────────────────────────────────────────────────
+
+function UsersTable({ users }: { users: AdminUser[] }) {
+  const [sortBy, setSortBy] = useState<
+    "totalInferences" | "totalSpentUsdc" | "lastInference" | "joinedAt"
+  >("totalInferences");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  const toggleSort = (col: typeof sortBy) => {
+    if (sortBy === col) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(col);
+      setSortDir("desc");
+    }
+  };
+
+  const sorted = useMemo(() => {
+    return [...users].sort((a, b) => {
+      let av: number;
+      let bv: number;
+      if (sortBy === "lastInference") {
+        av = a.lastInference ? new Date(a.lastInference).getTime() : 0;
+        bv = b.lastInference ? new Date(b.lastInference).getTime() : 0;
+      } else if (sortBy === "joinedAt") {
+        av = a.joinedAt ? new Date(a.joinedAt).getTime() : 0;
+        bv = b.joinedAt ? new Date(b.joinedAt).getTime() : 0;
+      } else {
+        av = a[sortBy];
+        bv = b[sortBy];
+      }
+      return sortDir === "desc" ? bv - av : av - bv;
+    });
+  }, [users, sortBy, sortDir]);
+
+  const sortIndicator = (col: typeof sortBy) =>
+    sortBy === col ? (sortDir === "desc" ? " \u2193" : " \u2191") : "";
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-start justify-between">
+        <div>
+          <CardTitle className="text-base font-semibold">User Addresses</CardTitle>
+          <CardDescription>
+            {users.length} address{users.length !== 1 ? "es" : ""} with inference activity · click to expand
+          </CardDescription>
+        </div>
+        <div
+          className="flex size-8 items-center justify-center rounded-lg"
+          style={{ backgroundColor: "#06b6d418" }}
+        >
+          <Wallet className="size-4" style={{ color: "#06b6d4" }} />
+        </div>
+      </CardHeader>
+      <CardContent>
+        {users.length === 0 ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">No user data yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left text-[11px] uppercase tracking-wide text-muted-foreground">
+                  <th className="pb-3 pr-4 font-semibold">Address</th>
+                  <th
+                    className="cursor-pointer pb-3 pr-4 text-right font-semibold hover:text-foreground"
+                    onClick={() => toggleSort("totalInferences")}
+                  >
+                    Inferences{sortIndicator("totalInferences")}
+                  </th>
+                  <th className="hidden pb-3 pr-4 text-right font-semibold sm:table-cell">
+                    Success
+                  </th>
+                  <th
+                    className="cursor-pointer pb-3 pr-4 text-right font-semibold hover:text-foreground"
+                    onClick={() => toggleSort("totalSpentUsdc")}
+                  >
+                    Spent (USDC){sortIndicator("totalSpentUsdc")}
+                  </th>
+                  <th className="hidden pb-3 pr-4 text-right font-semibold md:table-cell">
+                    Free
+                  </th>
+                  <th className="hidden pb-3 pr-4 text-right font-semibold lg:table-cell">
+                    Models
+                  </th>
+                  <th
+                    className="hidden cursor-pointer pb-3 pr-4 text-right font-semibold hover:text-foreground lg:table-cell"
+                    onClick={() => toggleSort("lastInference")}
+                  >
+                    Last Active{sortIndicator("lastInference")}
+                  </th>
+                  <th
+                    className="hidden cursor-pointer pb-3 text-right font-semibold hover:text-foreground lg:table-cell"
+                    onClick={() => toggleSort("joinedAt")}
+                  >
+                    Joined{sortIndicator("joinedAt")}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/40">
+                {sorted.map((u) => {
+                  const successRate =
+                    u.totalInferences > 0
+                      ? Math.round((u.succeededCount / u.totalInferences) * 100)
+                      : 0;
+                  const isExpanded = expanded === u.address;
+
+                  return (
+                    <tr
+                      key={u.address}
+                      className="group cursor-pointer transition-colors hover:bg-muted/40"
+                      onClick={() =>
+                        setExpanded(isExpanded ? null : u.address)
+                      }
+                    >
+                      <td className="py-3 pr-4">
+                        <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                          {u.address.slice(0, 6)}...{u.address.slice(-4)}
+                        </code>
+                      </td>
+                      <td className="py-3 pr-4 text-right tabular-nums">
+                        {u.totalInferences.toLocaleString()}
+                      </td>
+                      <td className="hidden py-3 pr-4 text-right sm:table-cell">
+                        <Badge
+                          variant={
+                            successRate >= 90
+                              ? "default"
+                              : successRate >= 70
+                                ? "secondary"
+                                : "destructive"
+                          }
+                          className="px-1.5 py-0 text-[10px]"
+                        >
+                          {successRate}%
+                        </Badge>
+                      </td>
+                      <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums">
+                        ${u.totalSpentUsdc.toFixed(4)}
+                      </td>
+                      <td className="hidden py-3 pr-4 text-right tabular-nums md:table-cell">
+                        {u.freeInferences > 0 ? (
+                          <span className="text-xs text-muted-foreground">
+                            {u.freeInferences} / {u.freeCreditsTotal}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="hidden py-3 pr-4 text-right tabular-nums lg:table-cell">
+                        {u.uniqueModels}
+                      </td>
+                      <td className="hidden py-3 pr-4 text-right text-xs text-muted-foreground lg:table-cell">
+                        {u.lastInference
+                          ? new Date(u.lastInference).toLocaleDateString()
+                          : "—"}
+                      </td>
+                      <td className="hidden py-3 text-right text-xs text-muted-foreground lg:table-cell">
+                        {u.joinedAt
+                          ? new Date(u.joinedAt).toLocaleDateString()
+                          : "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            {/* Expanded detail panel */}
+            {expanded && (() => {
+              const u = users.find((x) => x.address === expanded);
+              if (!u) return null;
+              const successRate =
+                u.totalInferences > 0
+                  ? Math.round(
+                      (u.succeededCount / u.totalInferences) * 100
+                    )
+                  : 0;
+              return (
+                <div className="mt-4 rounded-lg border border-border/60 bg-muted/20 p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <code className="rounded bg-muted px-2 py-1 font-mono text-xs">
+                      {u.address}
+                    </code>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigator.clipboard.writeText(u.address);
+                      }}
+                    >
+                      Copy
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 md:grid-cols-4">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Total Inferences</p>
+                      <p className="font-mono text-sm font-semibold tabular-nums">{u.totalInferences.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Success Rate</p>
+                      <p className="font-mono text-sm font-semibold tabular-nums">{successRate}%</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Total Spent</p>
+                      <p className="font-mono text-sm font-semibold tabular-nums">${u.totalSpentUsdc.toFixed(4)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Avg Response</p>
+                      <p className="font-mono text-sm font-semibold tabular-nums">{u.avgResponseMs != null ? `${u.avgResponseMs.toLocaleString()} ms` : "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Image</p>
+                      <p className="font-mono text-sm tabular-nums" style={{ color: TASK_COLORS["text-to-image"] }}>{u.textToImage}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Text</p>
+                      <p className="font-mono text-sm tabular-nums" style={{ color: TASK_COLORS["text-to-text"] }}>{u.textToText}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Audio</p>
+                      <p className="font-mono text-sm tabular-nums" style={{ color: TASK_COLORS["text-to-sound"] }}>{u.textToSound}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Unique Models</p>
+                      <p className="font-mono text-sm tabular-nums">{u.uniqueModels}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Free Credits</p>
+                      <p className="font-mono text-sm tabular-nums">
+                        {u.freeCreditsTotal > 0
+                          ? `${u.freeCreditsUsed} / ${u.freeCreditsTotal} used`
+                          : "None"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Joined</p>
+                      <p className="text-sm text-muted-foreground">{u.joinedAt ? new Date(u.joinedAt).toLocaleDateString() : "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">First Inference</p>
+                      <p className="text-sm text-muted-foreground">{u.firstInference ? new Date(u.firstInference).toLocaleDateString() : "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Last Active</p>
+                      <p className="text-sm text-muted-foreground">{u.lastInference ? new Date(u.lastInference).toLocaleString() : "—"}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── main component ────────────────────────────────────────────────────────────
 
 export function AdminDashboard() {
@@ -770,6 +1033,7 @@ export function AdminDashboard() {
     isLoading: isAuthLoading,
   } = useAuth();
   const { data, isLoading, error, refetch, isFetching } = useAdminMetrics();
+  const { data: usersData } = useAdminUsers();
 
   // ── derived metrics — must be before any early returns ───────────────────
 
@@ -939,6 +1203,12 @@ export function AdminDashboard() {
         <div className="space-y-4">
           <SectionLabel>Model Detail</SectionLabel>
           <ModelTable models={models} onModelClick={setSelectedModel} />
+        </div>
+
+        {/* ── Users ───────────────────────────────────────────────────────── */}
+        <div className="space-y-4">
+          <SectionLabel>Users</SectionLabel>
+          <UsersTable users={usersData?.users ?? []} />
         </div>
 
       </div>

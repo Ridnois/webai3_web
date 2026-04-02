@@ -23,6 +23,7 @@ import {
   Music,
   FileText,
   Image as ImageIcon,
+  Search,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -32,6 +33,13 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -295,68 +303,130 @@ function Sidebar({
   );
 }
 
-// ── Inline model picker ───────────────────────────────────────────────────────
+// ── Model picker dialog ──────────────────────────────────────────────────────
 
-function InlineModelPicker({
+function formatRunCount(count: number): string {
+  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M runs`;
+  if (count >= 1_000) return `${(count / 1_000).toFixed(1)}K runs`;
+  return `${count} runs`;
+}
+
+function ModelPickerDialog({
+  open,
+  onOpenChange,
   models,
   selectedModel,
   onSelect,
   isLoadingModels,
 }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   models: ReplicateModel[] | undefined;
   selectedModel: ReplicateModel | null;
   onSelect: (model: ReplicateModel) => void;
   isLoadingModels: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const filtered = models?.filter((m) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      m.name.toLowerCase().includes(q) ||
+      m.owner.toLowerCase().includes(q) ||
+      (m.description?.toLowerCase().includes(q) ?? false)
+    );
+  });
+
+  function handleSelect(model: ReplicateModel) {
+    onSelect(model);
+    onOpenChange(false);
+  }
+
+  // Reset search when dialog opens
+  useEffect(() => {
+    if (open) setSearch("");
+  }, [open]);
 
   return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        disabled={isLoadingModels || !models?.length}
-        className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground disabled:opacity-40"
-      >
-        {isLoadingModels ? (
-          <Loader2 className="size-3 animate-spin" />
-        ) : (
-          <ChevronDown className={cn("size-3 transition-transform duration-150", open && "rotate-180")} />
-        )}
-        <span className="max-w-[100px] truncate font-mono text-[11px] sm:max-w-[180px]">
-          {selectedModel ? `${selectedModel.owner}/${selectedModel.name}` : "Select model"}
-        </span>
-      </button>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex max-h-[80vh] flex-col gap-0 p-0 sm:max-w-lg">
+        <DialogHeader className="shrink-0 space-y-0 border-b px-4 pb-0 pt-4">
+          <DialogTitle className="text-sm font-semibold">Select Model</DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground">
+            Choose an AI model to run your inference
+          </DialogDescription>
+          <div className="relative pt-3 pb-3">
+            <Search className="absolute left-3 top-1/2 size-3.5 translate-y-[-20%] text-muted-foreground/50" />
+            <input
+              type="text"
+              placeholder="Search by name, owner, or description…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-9 w-full rounded-lg border border-border/60 bg-muted/30 pl-9 pr-3 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/20"
+              autoFocus
+            />
+          </div>
+        </DialogHeader>
 
-      {open && models && models.length > 0 && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute bottom-full left-0 z-20 mb-2 w-72 max-w-[calc(100vw-1rem)] overflow-hidden rounded-xl border bg-background shadow-xl shadow-black/10 dark:shadow-black/40">
-            <div className="max-h-60 overflow-y-auto">
-              {models.map((m) => {
-                const isActive = m.owner === selectedModel?.owner && m.name === selectedModel?.name;
+        <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
+          {isLoadingModels ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="size-5 animate-spin text-muted-foreground/40" />
+            </div>
+          ) : filtered?.length === 0 ? (
+            <p className="py-12 text-center text-sm text-muted-foreground/50">
+              No models match &ldquo;{search}&rdquo;
+            </p>
+          ) : (
+            <div className="space-y-1">
+              {filtered?.map((m) => {
+                const isActive =
+                  m.owner === selectedModel?.owner &&
+                  m.name === selectedModel?.name;
                 return (
                   <button
                     key={`${m.owner}/${m.name}`}
                     type="button"
-                    onClick={() => { onSelect(m); setOpen(false); }}
+                    onClick={() => handleSelect(m)}
                     className={cn(
-                      "flex w-full flex-col gap-0.5 px-3 py-2.5 text-left text-xs transition-colors hover:bg-muted/60",
-                      isActive && "bg-primary/8 text-primary"
+                      "flex w-full gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-muted/60",
+                      isActive && "bg-primary/8 ring-1 ring-primary/20"
                     )}
                   >
-                    <span className="font-mono font-medium">{m.owner}/{m.name}</span>
-                    {m.description && (
-                      <span className="line-clamp-1 text-muted-foreground/70">{m.description}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline gap-2">
+                        <span
+                          className={cn(
+                            "font-mono text-sm font-semibold",
+                            isActive && "text-primary"
+                          )}
+                        >
+                          {m.name}
+                        </span>
+                        <span className="shrink-0 text-[11px] text-muted-foreground/50">
+                          {m.owner}
+                        </span>
+                      </div>
+                      {m.description && (
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground/70">
+                          {m.description}
+                        </p>
+                      )}
+                    </div>
+                    {m.runCount > 0 && (
+                      <span className="shrink-0 self-start pt-0.5 text-[10px] tabular-nums text-muted-foreground/40">
+                        {formatRunCount(m.runCount)}
+                      </span>
                     )}
                   </button>
                 );
               })}
             </div>
-          </div>
-        </>
-      )}
-    </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -859,7 +929,7 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
   const result = inference.result ?? submitMutation.data?.response;
   const hasActiveContent = !!(result || isLoading || submitMutation.error);
   const taskNav = TASK_NAV.find((n) => n.task === task)!;
-  const [mobileModelOpen, setMobileModelOpen] = useState(false);
+  const [modelDialogOpen, setModelDialogOpen] = useState(false);
   const [mobileTemplatesOpen, setMobileTemplatesOpen] = useState(false);
   const [mobileHistoryOpen, setMobileHistoryOpen] = useState(false);
 
@@ -876,68 +946,39 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
         className="w-full resize-none bg-transparent px-4 pt-4 pb-2 text-sm leading-relaxed placeholder:text-muted-foreground/40 focus:outline-none"
       />
 
-      {/* Mobile bottom row: model chip + cost + send */}
-      <div className="flex items-center gap-2 px-3 pb-3 md:hidden">
-        <button
-          type="button"
-          onClick={() => setMobileModelOpen(true)}
-          disabled={isLoadingModels || !models?.length}
-          className="flex min-w-0 flex-1 items-center gap-1.5 rounded-xl bg-muted/50 px-3 py-2.5 text-left transition-colors active:bg-muted/80 disabled:opacity-40"
-        >
-          {isLoadingModels
-            ? <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
-            : <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
-          }
-          <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">
-            {selectedModel ? selectedModel.name : "Select model"}
-          </span>
-        </button>
-        {estimatedCostUsdc !== null && (
-          <span className={cn(
-            "shrink-0 font-mono text-xs",
-            insufficientFunds ? "text-destructive" : "text-muted-foreground/60"
-          )}>
-            ~{formatUsdc(estimatedCostUsdc)}
-          </span>
-        )}
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={!canSubmit}
-          className={cn(
-            "brand-cta flex size-11 shrink-0 items-center justify-center rounded-full transition-all duration-200",
-            !canSubmit && "opacity-30 cursor-not-allowed"
-          )}
-        >
-          {isLoading
-            ? <Loader2 className="size-4 animate-spin" />
-            : <ArrowUp className="size-4" />
-          }
-        </button>
-      </div>
-
-      {/* Desktop bottom row: inline model + cost + params + send */}
-      <div className="hidden items-center justify-between px-2 pb-2 md:flex">
-        <div className="flex items-center gap-0.5">
-          <InlineModelPicker
-            models={models}
-            selectedModel={selectedModel}
-            onSelect={setSelectedModel}
-            isLoadingModels={isLoadingModels}
-          />
+      {/* Bottom row: model chip + cost + params + send */}
+      <div className="flex items-center justify-between gap-2 px-2 pb-2 sm:px-3 sm:pb-3">
+        <div className="flex min-w-0 items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setModelDialogOpen(true)}
+            disabled={isLoadingModels || !models?.length}
+            className="flex min-w-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground active:bg-muted/80 disabled:opacity-40"
+          >
+            {isLoadingModels ? (
+              <Loader2 className="size-3 shrink-0 animate-spin" />
+            ) : (
+              <ChevronDown className="size-3 shrink-0" />
+            )}
+            <span className="max-w-[120px] truncate font-mono text-[11px] sm:max-w-[200px]">
+              {selectedModel ? selectedModel.name : "Select model"}
+            </span>
+          </button>
           {estimatedCostUsdc !== null && (
             <span className={cn(
-              "px-2.5 py-1.5 text-xs font-mono",
-              insufficientFunds ? "text-destructive" : "text-muted-foreground/60"
+              "shrink-0 px-1.5 py-1 font-mono text-[11px]",
+              insufficientFunds ? "text-destructive" : "text-muted-foreground/50"
             )}>
-              ~{formatUsdc(estimatedCostUsdc)}
+              {formatUsdc(estimatedCostUsdc)}
             </span>
           )}
-          <ParamsPopover
-            extraFields={extraFields}
-            extraValues={extraValues}
-            setExtraValues={setExtraValues}
-          />
+          <div className="hidden md:block">
+            <ParamsPopover
+              extraFields={extraFields}
+              extraValues={extraValues}
+              setExtraValues={setExtraValues}
+            />
+          </div>
         </div>
         <button
           type="button"
@@ -945,7 +986,7 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
           disabled={!canSubmit}
           title={!selectedModel ? "Select a model" : !promptValue.trim() ? "Enter a prompt" : undefined}
           className={cn(
-            "brand-cta flex size-8 shrink-0 items-center justify-center rounded-full transition-all duration-200",
+            "brand-cta flex size-9 shrink-0 items-center justify-center rounded-full transition-all duration-200 sm:size-8",
             !canSubmit && "opacity-30 cursor-not-allowed"
           )}
         >
@@ -1194,41 +1235,15 @@ export function InferencePageLayout({ task }: InferencePageLayoutProps) {
         </div>
       </div>
 
-      {/* Mobile model picker sheet */}
-      <Sheet open={mobileModelOpen} onOpenChange={setMobileModelOpen}>
-        <SheetContent side="bottom" className="flex h-[72vh] flex-col p-0">
-          <SheetHeader className="shrink-0 border-b px-4 py-3">
-            <SheetTitle className="text-sm font-medium">Select Model</SheetTitle>
-          </SheetHeader>
-          <div className="flex-1 overflow-y-auto px-2 py-2">
-            {isLoadingModels ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="size-5 animate-spin text-muted-foreground/40" />
-              </div>
-            ) : (
-              models?.map((m) => {
-                const isActive = m.owner === selectedModel?.owner && m.name === selectedModel?.name;
-                return (
-                  <button
-                    key={`${m.owner}/${m.name}`}
-                    type="button"
-                    onClick={() => { setSelectedModel(m); setMobileModelOpen(false); }}
-                    className={cn(
-                      "flex w-full flex-col gap-0.5 rounded-lg px-3 py-3 text-left transition-colors hover:bg-muted/60 active:bg-muted/80",
-                      isActive && "bg-primary/8 text-primary"
-                    )}
-                  >
-                    <span className="font-mono text-sm font-medium">{m.owner}/{m.name}</span>
-                    {m.description && (
-                      <span className="line-clamp-1 text-xs text-muted-foreground/70">{m.description}</span>
-                    )}
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
+      {/* Model picker dialog (shared by mobile + desktop) */}
+      <ModelPickerDialog
+        open={modelDialogOpen}
+        onOpenChange={setModelDialogOpen}
+        models={models}
+        selectedModel={selectedModel}
+        onSelect={setSelectedModel}
+        isLoadingModels={isLoadingModels}
+      />
 
       <ConnectDialog open={connectDialogOpen} onOpenChange={setConnectDialogOpen} />
       <PaymentConfirmDialog
